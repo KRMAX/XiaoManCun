@@ -1,0 +1,9 @@
+[
+    { "id": "npc_grandma_01", "name": "外婆", "role": "剧情", "bio": "家庭情感核心，连接玩家与老家的过去。", "introDay": 1 },
+    { "id": "npc_zhao_chunlan_01", "name": "赵春兰", "role": "商店", "bio": "供销社老板娘，售卖种子工具，也是村里消息源。", "introDay": 2 },
+    { "id": "npc_lin_shuji_01", "name": "林书记", "role": "剧情", "bio": "村支书，发布村庄建设任务。", "introDay": 2 },
+    { "id": "npc_han_bo_01", "name": "韩伯", "role": "教学", "bio": "老钓客，教玩家钓鱼。", "introDay": 3 },
+    { "id": "npc_zhou_mujiang_01", "name": "周木匠", "role": "教学", "bio": "老木匠，负责房屋修缮与家具。", "introDay": 5 },
+    { "id": "npc_liang_jianguo_01", "name": "梁建国", "role": "快递", "bio": "快递站老板，连接电商订单与好友交易。", "introDay": 6 },
+    { "id": "npc_tang_xiaoman_01", "name": "唐晓满", "role": "集市", "bio": "县城集市的活跃摊主，引导赶集玩法。", "introDay": 7 }
+]

@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>小满村 | 开场过场动画原型</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="cinematic-shell">
+      <section class="phone-stage" aria-label="小满村开场过场动画">
+        <div class="scene-stack" id="sceneStack">
+          <article
+            class="scene is-office"
+            data-start="0"
+            data-end="12.2"
+            data-marker="凌晨工位"
+            data-x0="0"
+            data-y0="-1"
+            data-x1="1"
+            data-y1="3"
+            data-s0="1.02"
+            data-s1="1.16"
+          >
+            <img
+              class="scene-media"
+              src="../../../assets/cinematics/opening-return-home/scene-00-office-exhaustion.png"
+              alt="深夜办公室里疲惫加班的年轻人"
+            />
+          </article>
+
+          <article
+            class="scene is-city"
+            data-start="10.4"
+            data-end="22"
+            data-marker="雨夜离开"
+            data-x0="0"
+            data-y0="0"
+            data-x1="-2"
+            data-y1="2"
+            data-s0="1.02"
+            data-s1="1.16"
+          >
+            <img
+              class="scene-media"
+              src="../../../assets/cinematics/opening-return-home/scene-01-city-departure.png"
+              alt="雨夜城市中准备返乡的年轻人"
+            />
+          </article>
+
+          <article
+            class="scene is-bus-road"
+            data-start="20"
+            data-end="31"
+            data-marker="长途车上"
+            data-x0="-8"
+            data-y0="0"
+            data-x1="3"
+            data-y1="-2"
+            data-s0="1.08"
+            data-s1="1.22"
+          >
+            <img
+              class="scene-media"
+              src="../../../assets/jimeng/opening-video/02-bus-rural-road-dawn.png"
+              alt="清晨长途车驶向乡村"
+            />
+          </article>
+
+          <article
+            class="scene is-bus-arrival"
+            data-start="29.4"
+            data-end="45"
+            data-marker="村口下车"
+            data-x0="-1"
+            data-y0="3"
+            data-x1="1"
+            data-y1="-2"
+            data-s0="1.08"
+            data-s1="1.18"
+          >
+            <img
+              class="scene-media"
+              src="../../../assets/cinematics/opening-return-home/scene-02-bus-arrival-village-stop.png"
+              alt="主角在村口小站下车拖着行李走向村子"
+            />
+          </article>
+
+          <article
+            class="scene is-road"
+            data-start="43.5"
+            data-end="55"
+            data-marker="村边小路"
+            data-x0="-4"
+            data-y0="1"
+            data-x1="3"
+            data-y1="-1"
+            data-s0="1.14"
+            data-s1="1.25"
+          >
+            <img
+              class="scene-media"
+              src="../../../assets/concepts/xiaomancun-river-bamboo-exploration.png"
+              alt="竹林河谷与乡间小路"
+            />
+          </article>
+
+          <article
+            class="scene is-village"
+            data-start="53"
+            data-end="66"
+            data-marker="小满村"
+            data-x0="4"
+            data-y0="0"
+            data-x1="-3"
+            data-y1="-1"
+            data-s0="1.2"
+            data-s1="1.05"
+          >
+            <img
+              class="scene-media"
+              src="../../../assets/concepts/xiaomancun-village-building.png"
+              alt="小满村村口和公共建筑"
+            />
+          </article>
+
+          <article
+            class="scene is-courtyard"
+            data-start="64.5"
+            data-end="78"
+            data-marker="旧院子"
+            data-x0="-5"
+            data-y0="2"
+            data-x1="2"
+            data-y1="-2"
+            data-s0="1.1"
+            data-s1="1.22"
+          >
+            <img
+              class="scene-media"
+              src="../../../assets/concepts/xiaomancun-courtyard-farming.png"
+              alt="小满村农家院和菜地"
+            />
+          </article>
+
+          <article
+            class="scene is-home"
+            data-start="76"
+            data-end="86"
+            data-marker="灶台余温"
+            data-x0="2"
+            data-y0="-1"
+            data-x1="-4"
+            data-y1="2"
+            data-s0="1.15"
+            data-s1="1.04"
+          >
+            <img
+              class="scene-media"
+              src="../../../assets/concepts/xiaomancun-home-interior.png"
+              alt="温暖的乡村老屋室内"
+            />
+          </article>
+
+          <article
+            class="scene is-dawn"
+            data-start="84"
+            data-end="94"
+            data-marker="春一日"
+            data-x0="3"
+            data-y0="1"
+            data-x1="-2"
+            data-y1="-1"
+            data-s0="1.18"
+            data-s1="1.06"
+          >
+            <img
+              class="scene-media"
+              src="../../../assets/concepts/xiaomancun-courtyard-farming.png"
+              alt="清晨的农场和院子"
+            />
+          </article>
+
+          <div class="wash"></div>
+          <div class="rain-lines"></div>
+          <div class="pressure-list" id="pressureList" aria-hidden="true">
+            <span>00:43</span>
+            <span>待办 17</span>
+            <span>房租扣款</span>
+            <span>外婆语音</span>
+          </div>
+          <div class="soft-vignette"></div>
+
+          <header class="hud-top">
+            <p class="chapter" id="chapterLabel">返乡前夜</p>
+            <p class="timecode" id="timecode">22:47</p>
+          </header>
+
+          <div class="message-card" id="messageCard" aria-live="polite">
+            <p class="speaker" id="speaker"></p>
+            <p class="line" id="lineText"></p>
+          </div>
+
+          <div class="title-card" id="titleCard" aria-hidden="true">
+            <p>春 一日</p>
+            <h1>小满村</h1>
+            <button class="solid-button" type="button" id="enterButton">进入游戏</button>
+          </div>
+        </div>
+
+        <footer class="controls">
+          <div class="progress-track" aria-hidden="true">
+            <span id="progressFill"></span>
+          </div>
+          <div class="control-row">
+            <button class="ghost-button" type="button" id="replayButton">重播</button>
+            <button class="ghost-button" type="button" id="soundButton" aria-pressed="false">声音关</button>
+            <button class="solid-button" type="button" id="playButton">暂停</button>
+            <button class="ghost-button" type="button" id="skipButton">跳过</button>
+          </div>
+        </footer>
+      </section>
+    </main>
+
+    <script src="./opening-animation.js"></script>
+  </body>
+</html>

@@ -1,0 +1,18 @@
+<module name="">
+    <enum name="Season">
+        <var name="Spring" value="1"/>
+        <var name="Summer" value="2"/>
+        <var name="Autumn" value="3"/>
+        <var name="Winter" value="4"/>
+    </enum>
+
+    <enum name="ItemType">
+        <var name="Seed" value="1"/>
+        <var name="Crop" value="2"/>
+        <var name="Fish" value="3"/>
+        <var name="Material" value="4"/>
+        <var name="Processed" value="5"/>
+        <var name="Gift" value="6"/>
+        <var name="Tool" value="7"/>
+    </enum>
+</module>

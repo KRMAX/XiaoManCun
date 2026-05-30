@@ -1,0 +1,13 @@
+<module name="">
+    <!-- 物品基础表 -->
+    <bean name="Item">
+        <var name="id" type="string"/>
+        <var name="name" type="string"/>
+        <var name="type" type="ItemType"/>
+        <var name="basePrice" type="int"/>
+        <var name="stackable" type="bool"/>
+        <var name="desc" type="string"/>
+    </bean>
+
+    <table name="TbItem" value="Item" input="item.json"/>
+</module>

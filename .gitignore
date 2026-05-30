@@ -1,0 +1,17 @@
+.DS_Store
+*.log
+
+node_modules/
+
+.env
+.env.*
+!.env.example
+
+dist/
+build/
+coverage/
+.cache/
+.vite/
+.next/
+
+tmp/

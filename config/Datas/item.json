@@ -1,0 +1,10 @@
+[
+    { "id": "seed_bokchoy_01", "name": "小青菜种子", "type": "Seed", "basePrice": 12, "stackable": true, "desc": "春秋可种，新手作物。" },
+    { "id": "item_bokchoy_01", "name": "小青菜", "type": "Crop", "basePrice": 25, "stackable": true, "desc": "清炒下饭，集市常见。" },
+    { "id": "item_radish_white_01", "name": "白萝卜", "type": "Crop", "basePrice": 36, "stackable": true, "desc": "可腌制成腌萝卜。" },
+    { "id": "processed_pickled_radish_01", "name": "腌萝卜", "type": "Processed", "basePrice": 90, "stackable": true, "desc": "白萝卜腌制而成，集市抢手。" },
+    { "id": "item_carp_01", "name": "鲫鱼", "type": "Fish", "basePrice": 30, "stackable": true, "desc": "河道常见鱼，可做鱼汤。" },
+    { "id": "tool_hoe_01", "name": "锄头", "type": "Tool", "basePrice": 0, "stackable": false, "desc": "外婆给的旧锄头，用于开垦。" },
+    { "id": "tool_watercan_01", "name": "水壶", "type": "Tool", "basePrice": 0, "stackable": false, "desc": "浇水工具。" },
+    { "id": "gift_handmade_chili_sauce_01", "name": "手工辣酱", "type": "Gift", "basePrice": 120, "stackable": true, "desc": "可送礼也可在集市售卖。" }
+]

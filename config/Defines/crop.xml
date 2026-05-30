@@ -1,0 +1,24 @@
+<module name="">
+    <!-- 作物表，字段对齐 docs/design-tables/crop-values.md -->
+    <bean name="Crop">
+        <var name="id" type="string"/>
+        <var name="name" type="string"/>
+        <!-- 可种植季节，多选 -->
+        <var name="seasons" type="(list#sep=,),Season"/>
+        <!-- 从播种到首次收获的天数 -->
+        <var name="growDays" type="int"/>
+        <!-- 美术生长阶段数量 -->
+        <var name="stages" type="int"/>
+        <!-- 复收间隔天数，0 表示不复收 -->
+        <var name="regrowDays" type="int"/>
+        <var name="seedPrice" type="int"/>
+        <var name="basePrice" type="int"/>
+        <var name="needWater" type="bool"/>
+        <!-- 主要用途说明 -->
+        <var name="usage" type="string"/>
+        <!-- 解锁条件 -->
+        <var name="unlock" type="string"/>
+    </bean>
+
+    <table name="TbCrop" value="Crop" input="crop.json"/>
+</module>

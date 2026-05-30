@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>小满村 · 春一日（M1 初始风格原型）</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="viewport">
+  <div id="stage">
+    <!-- 瓦片世界渲染层 -->
+    <canvas id="scene" width="1280" height="720"></canvas>
+
+    <!-- 顶部 HUD -->
+    <div id="hud">
+      <div class="hud-left">
+        <div class="chip chip-date" id="chip-date">春 · 第 1 天</div>
+        <div class="chip chip-time" id="chip-weather">早 06:00</div>
+      </div>
+      <div class="hud-right">
+        <div class="chip chip-cash" id="chip-cash">0</div>
+        <div class="chip chip-energy" id="chip-energy">100</div>
+      </div>
+    </div>
+
+    <!-- 操作摇杆提示 -->
+    <div id="ctrl-hint">点地面 / WASD·方向键走动 · 点菜地·池塘·鸡舍·屋门查看</div>
+
+    <!-- 外婆对话框 -->
+    <div id="dialog">
+      <div id="dialog-portrait" aria-label="外婆头像"></div>
+      <div id="dialog-body">
+        <div id="dialog-name">外婆</div>
+        <div id="dialog-text"></div>
+        <div id="dialog-next">点击继续 ▸</div>
+      </div>
+    </div>
+
+    <!-- 主行动按钮（睡觉等） -->
+    <button id="action-btn" class="hidden"></button>
+
+    <!-- 夜晚过渡 -->
+    <div id="night"></div>
+
+    <!-- 加载/标题 -->
+    <div id="title-card">
+      <div class="tc-layout">
+        <img class="tc-yard" src="assets/ui/title-yard.png" alt="" aria-hidden="true" />
+        <div class="tc-copy">
+          <div class="tc-sub">《小满村》</div>
+          <div class="tc-main">春 · 一日</div>
+          <div class="tc-tip">回到外婆家的老院子，种下回乡第一片菜</div>
+          <button id="start-btn" disabled>素材加载中…</button>
+          <div class="tc-credit">美术：小满村初始风格像素包</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="end-card" class="hidden">
+      <img class="ec-badge" src="assets/ui/crop-badge.png" alt="" aria-hidden="true" />
+      <div class="ec-title"></div>
+      <div class="ec-goal"></div>
+      <button id="end-btn">再种一茬</button>
+    </div>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>

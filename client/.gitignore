@@ -1,0 +1,19 @@
+# Cocos Creator 生成目录（不入库）
+/library/
+/temp/
+/local/
+/build/
+/profiles/
+/native/
+
+# 系统文件
+.DS_Store
+
+# 依赖
+node_modules/
+
+# Luban 生成产物（由 config/ 生成后同步到此处）
+/assets/scripts/config/generated/*
+!/assets/scripts/config/generated/.gitkeep
+/assets/resources/config/*
+!/assets/resources/config/.gitkeep

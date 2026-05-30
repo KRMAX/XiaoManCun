@@ -1,0 +1,10 @@
+{
+  "name": "xiaomancun",
+  "uuid": "b1f3c0a2-9d44-4e6a-9b2e-3a7c1d5e8f00",
+  "version": "0.1.0",
+  "description": "小满村 - 微信小游戏客户端 (Cocos Creator 3.8, 横屏 16:9)",
+  "creator": {
+    "version": "3.8.4"
+  },
+  "type": "2d"
+}

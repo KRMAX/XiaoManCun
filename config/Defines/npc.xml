@@ -1,0 +1,14 @@
+<module name="">
+    <!-- NPC 基础表，对齐 docs/design-tables/npc-relationships-and-bios.md -->
+    <bean name="Npc">
+        <var name="id" type="string"/>
+        <var name="name" type="string"/>
+        <!-- 功能定位：教学/商店/剧情/集市/快递/社交 -->
+        <var name="role" type="string"/>
+        <var name="bio" type="string"/>
+        <!-- 首次登场天数（前 7 天节奏） -->
+        <var name="introDay" type="int"/>
+    </bean>
+
+    <table name="TbNpc" value="Npc" input="npc.json"/>
+</module>

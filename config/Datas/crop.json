@@ -1,0 +1,16 @@
+[
+    { "id": "crop_bokchoy_01", "name": "小青菜", "seasons": ["Spring", "Autumn"], "growDays": 4, "stages": 4, "regrowDays": 0, "seedPrice": 12, "basePrice": 25, "needWater": true, "usage": "新手出售、日常委托", "unlock": "初始" },
+    { "id": "crop_radish_white_01", "name": "白萝卜", "seasons": ["Spring", "Winter"], "growDays": 5, "stages": 4, "regrowDays": 0, "seedPrice": 15, "basePrice": 36, "needWater": true, "usage": "腌萝卜、萝卜糕", "unlock": "初始" },
+    { "id": "crop_scallion_01", "name": "小葱", "seasons": ["Spring", "Summer", "Autumn"], "growDays": 3, "stages": 3, "regrowDays": 2, "seedPrice": 18, "basePrice": 12, "needWater": true, "usage": "料理调味、礼物", "unlock": "供销社1" },
+    { "id": "crop_tomato_01", "name": "番茄", "seasons": ["Summer", "Autumn"], "growDays": 8, "stages": 5, "regrowDays": 3, "seedPrice": 40, "basePrice": 28, "needWater": true, "usage": "番茄酱、蔬菜礼盒", "unlock": "供销社1" },
+    { "id": "crop_chili_01", "name": "辣椒", "seasons": ["Summer", "Autumn"], "growDays": 7, "stages": 5, "regrowDays": 3, "seedPrice": 36, "basePrice": 24, "needWater": true, "usage": "辣酱、干辣椒、夜市", "unlock": "供销社1" },
+    { "id": "crop_cucumber_01", "name": "黄瓜", "seasons": ["Summer"], "growDays": 6, "stages": 4, "regrowDays": 2, "seedPrice": 32, "basePrice": 20, "needWater": true, "usage": "凉菜、夜市订单", "unlock": "供销社1" },
+    { "id": "crop_corn_01", "name": "玉米", "seasons": ["Summer", "Autumn"], "growDays": 10, "stages": 5, "regrowDays": 0, "seedPrice": 50, "basePrice": 95, "needWater": true, "usage": "烤玉米、饲料", "unlock": "供销社2" },
+    { "id": "crop_sweet_potato_01", "name": "红薯", "seasons": ["Autumn"], "growDays": 7, "stages": 4, "regrowDays": 0, "seedPrice": 30, "basePrice": 70, "needWater": true, "usage": "红薯干、烤红薯", "unlock": "供销社2" },
+    { "id": "crop_pumpkin_01", "name": "南瓜", "seasons": ["Autumn"], "growDays": 13, "stages": 6, "regrowDays": 0, "seedPrice": 80, "basePrice": 220, "needWater": true, "usage": "丰收集评比、南瓜饼", "unlock": "秋季剧情" },
+    { "id": "crop_rapeseed_01", "name": "油菜花", "seasons": ["Spring"], "growDays": 6, "stages": 4, "regrowDays": 0, "seedPrice": 25, "basePrice": 52, "needWater": true, "usage": "菜籽油、蜂蜜加成", "unlock": "供销社2" },
+    { "id": "crop_watermelon_01", "name": "西瓜", "seasons": ["Summer"], "growDays": 12, "stages": 6, "regrowDays": 0, "seedPrice": 90, "basePrice": 230, "needWater": true, "usage": "夜市、夏季订单", "unlock": "夜市解锁" },
+    { "id": "crop_soybean_01", "name": "黄豆", "seasons": ["Summer", "Autumn"], "growDays": 9, "stages": 5, "regrowDays": 0, "seedPrice": 38, "basePrice": 88, "needWater": true, "usage": "豆腐、豆浆", "unlock": "供销社2" },
+    { "id": "crop_peanut_01", "name": "花生", "seasons": ["Summer", "Autumn"], "growDays": 8, "stages": 4, "regrowDays": 0, "seedPrice": 42, "basePrice": 96, "needWater": true, "usage": "花生糖、油料", "unlock": "供销社2" },
+    { "id": "crop_strawberry_01", "name": "草莓", "seasons": ["Spring"], "growDays": 8, "stages": 5, "regrowDays": 3, "seedPrice": 70, "basePrice": 42, "needWater": true, "usage": "果酱、礼物", "unlock": "好感任务" }
+]

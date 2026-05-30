@@ -1,0 +1,6 @@
+# Luban 工具本体（自行下载，不入库）
+/Luban/
+Luban.dll
+
+# 本地生成的临时输出
+/output/
