@@ -21,6 +21,7 @@
   const stage = $('stage');
   const canvas = $('scene');
   const ctx = canvas.getContext('2d');
+  const actionBtn = $('action-btn');
 
   function fit() {
     const s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
@@ -289,6 +290,35 @@
     moving: false,
   }));
 
+  const cropTypes = MAP.cropTypes || {};
+  const crops = [];
+  for (const bed of MAP.cropBeds) {
+    const type = cropTypes[bed.crop] || { name: bed.crop, maxStage: 3, value: 5, spriteOffset: 0 };
+    for (let y = 0; y < bed.rect.h; y++) {
+      for (let x = 0; x < bed.rect.w; x++) {
+        const idx = x + y * bed.rect.w;
+        const stagePattern = bed.stagePattern || [1];
+        const waterPattern = bed.wateredPattern || [];
+        crops.push({
+          id: `${bed.id}-${x}-${y}`,
+          bedId: bed.id,
+          bed,
+          crop: bed.crop,
+          cropName: type.name,
+          maxStage: type.maxStage,
+          value: type.value,
+          spriteOffset: type.spriteOffset || 0,
+          tx: bed.rect.x + x,
+          ty: bed.rect.y + y,
+          stage: Math.min(type.maxStage, stagePattern[(x + y * 2) % stagePattern.length]),
+          watered: !!waterPattern[idx % Math.max(1, waterPattern.length)],
+          harvested: false,
+          owner: bed.owner || 'player',
+        });
+      }
+    }
+  }
+
   function setDestination(x, y, interact) {
     const safe = walk(hero.x, hero.y) ? null : nearestWalkGrid(hero.x, hero.y);
     if (safe) {
@@ -364,6 +394,59 @@
     }
   }
 
+  function activeSchedule(entity) {
+    if (!entity.schedule || !entity.schedule.length) return null;
+    const min = Math.floor(game.timeMin) % 1440;
+    for (let i = 0; i < entity.schedule.length; i++) {
+      const slot = entity.schedule[i];
+      if (min >= slot.from && min < slot.to) return { ...slot, index: i };
+    }
+    return { ...entity.schedule[0], index: 0 };
+  }
+
+  function stepEntityTo(entity, targetX, targetY, speed) {
+    const dx = targetX - entity.x;
+    const dy = targetY - entity.y;
+    const d = Math.hypot(dx, dy);
+    if (d <= 1) {
+      entity.moving = false;
+      return true;
+    }
+    const vx = dx / d;
+    const vy = dy / d;
+    const nx = entity.x + vx * speed;
+    const ny = entity.y + vy * speed;
+    if (walk(nx, entity.y)) entity.x = nx;
+    if (walk(entity.x, ny)) entity.y = ny;
+    entity.moving = true;
+    if (Math.abs(vx) > Math.abs(vy)) entity.dir = vx > 0 ? 'right' : 'left';
+    else entity.dir = vy > 0 ? 'down' : 'up';
+    return false;
+  }
+
+  function updateNpc(entity) {
+    const slot = activeSchedule(entity);
+    if (!slot) return;
+    if (entity.scheduleIndex !== slot.index) {
+      entity.scheduleIndex = slot.index;
+      entity.path = findPath(entity.x, entity.y, tw(slot.x), tw(slot.y));
+      entity.pathTarget = { x: tw(slot.x), y: tw(slot.y), dir: slot.dir };
+    }
+    if (entity.path && entity.path.length) {
+      const next = entity.path[0];
+      if (stepEntityTo(entity, next.x, next.y, 0.72)) entity.path.shift();
+      return;
+    }
+    if (entity.pathTarget) {
+      if (Math.hypot(entity.x - entity.pathTarget.x, entity.y - entity.pathTarget.y) > 3) {
+        stepEntityTo(entity, entity.pathTarget.x, entity.pathTarget.y, 0.72);
+      } else {
+        entity.moving = false;
+        entity.dir = entity.pathTarget.dir || entity.dir;
+      }
+    }
+  }
+
   function animalCanStand(entity, x, y) {
     if (!walk(x, y)) return false;
     if (!entity.roam) return true;
@@ -374,7 +457,15 @@
   function updateEntities() {
     for (const e of entities) {
       e.anim += e.moving ? 0.12 : 0.04;
+      if (e.type === 'npc') {
+        updateNpc(e);
+        continue;
+      }
       if (e.type !== 'animal') continue;
+      if (e.fed && !e.eggReady && e.eggTimer > 0) {
+        e.eggTimer -= 1;
+        if (e.eggTimer <= 0) e.eggReady = true;
+      }
       const dx = e.tx - e.x;
       const dy = e.ty - e.y;
       const d = Math.hypot(dx, dy);
@@ -411,6 +502,58 @@
     return { x: tw(rect.x), y: tw(rect.y), w: tw(rect.w), h: tw(rect.h) };
   }
 
+  function cropAtTile(tx, ty) {
+    return crops.find((c) => c.tx === tx && c.ty === ty) || null;
+  }
+
+  function nearestCrop(maxDist = 50) {
+    let best = null;
+    let bestDist = Infinity;
+    for (const c of crops) {
+      const x = tw(c.tx + 0.5);
+      const y = tw(c.ty + 0.5);
+      const d = Math.hypot(hero.x - x, hero.y - y);
+      if (d < bestDist && d <= maxDist) {
+        best = c;
+        bestDist = d;
+      }
+    }
+    return best;
+  }
+
+  function nearestAnimal(maxDist = 70) {
+    let best = null;
+    let bestDist = Infinity;
+    for (const e of entities) {
+      if (e.type !== 'animal') continue;
+      const d = Math.hypot(hero.x - e.x, hero.y - e.y);
+      if (d < bestDist && d <= maxDist) {
+        best = e;
+        bestDist = d;
+      }
+    }
+    return best;
+  }
+
+  function cropBedLines(bed) {
+    const bedCrops = crops.filter((c) => c.bedId === bed.id && !c.harvested);
+    const mature = bedCrops.filter((c) => c.stage >= c.maxStage).length;
+    const watered = bedCrops.filter((c) => c.watered).length;
+    if (bed.owner !== 'player') return bed.lines;
+    return [
+      `【${bed.name}】`,
+      `${bedCrops.length} 格作物，${mature} 格已经成熟，${watered} 格今天浇过水。`,
+      '靠近单格作物时，右下角会出现可执行动作。',
+    ];
+  }
+
+  function entityLines(entity) {
+    if (entity.type !== 'animal') return entity.dialogue || [`【${entity.name}】`, '……'];
+    if (entity.eggReady) return [`【${entity.name}】`, '草窝旁边有一枚热乎乎的鸡蛋。', '靠近它可以捡蛋。'];
+    if (!entity.fed) return [`【${entity.name}】`, '它在地上啄来啄去，看起来还没吃饱。', '靠近它可以喂鸡。'];
+    return [`【${entity.name}】`, '它吃饱了，慢慢在鸡舍边散步。', '等一会儿可能会下蛋。'];
+  }
+
   function hitInteract(x, y) {
     for (const obj of MAP.objects) {
       if (!obj.interact) continue;
@@ -431,7 +574,7 @@
           name: bed.name,
           x: tw(bed.stand.x),
           y: tw(bed.stand.y),
-          lines: bed.lines,
+          lines: cropBedLines(bed),
         };
       }
     }
@@ -442,7 +585,7 @@
           name: e.name,
           x: e.x,
           y: e.y + 18,
-          lines: e.dialogue || [`【${e.name}】`, '……'],
+          lines: entityLines(e),
         };
       }
     }
@@ -464,8 +607,8 @@
       if (!obj.interact) continue;
       push(obj.interact.name || obj.name, tw(obj.interact.stand.x), tw(obj.interact.stand.y), obj.interact.lines);
     }
-    for (const bed of MAP.cropBeds) push(bed.name, tw(bed.stand.x), tw(bed.stand.y), bed.lines);
-    for (const e of entities) push(e.name, e.x, e.y, e.dialogue);
+    for (const bed of MAP.cropBeds) push(bed.name, tw(bed.stand.x), tw(bed.stand.y), cropBedLines(bed));
+    for (const e of entities) push(e.name, e.x, e.y, entityLines(e));
     for (const p of MAP.portals || []) push(p.name, tw(p.stand.x), tw(p.stand.y), p.lines);
     return list;
   }
@@ -502,6 +645,134 @@
     $('chip-energy').textContent = String(game.energy);
   }
 
+  let currentAction = null;
+  function spendEnergy(cost) {
+    if (game.energy < cost) {
+      speak(['【体力不足】', '今天有点累了，先缓一缓。']);
+      return false;
+    }
+    game.energy = Math.max(0, game.energy - cost);
+    updateHud();
+    return true;
+  }
+
+  function actionForCrop(crop) {
+    if (!crop) return null;
+    if (crop.owner !== 'player') {
+      return {
+        label: '查看',
+        run: () => speak([`【${crop.bed.name}】`, '这是别人家的地，先别动手。', '正式版会根据关系、任务或租地规则开放。']),
+      };
+    }
+    if (crop.harvested) {
+      return {
+        label: '播种',
+        run: () => {
+          if (!spendEnergy(1)) return;
+          crop.harvested = false;
+          crop.stage = 1;
+          crop.watered = false;
+          beep(520, 0.09, 'triangle');
+          speak([`【${crop.cropName}】`, '把新种子按进土里。', '这格地重新进入生长状态。']);
+        },
+      };
+    }
+    if (crop.stage >= crop.maxStage) {
+      return {
+        label: '收获',
+        run: () => {
+          crop.harvested = true;
+          crop.watered = false;
+          game.cash += crop.value;
+          updateHud();
+          beep(720, 0.12, 'triangle');
+          speak([`【${crop.cropName}】`, `收获一份${crop.cropName}，卖出 +${crop.value}。`, '作物从数据状态里被移除，地块空出来了。']);
+        },
+      };
+    }
+    if (!crop.watered) {
+      return {
+        label: '浇水',
+        run: () => {
+          if (!spendEnergy(2)) return;
+          crop.watered = true;
+          crop.stage = Math.min(crop.maxStage, crop.stage + 1);
+          beep(620, 0.1, 'sine');
+          speak([`【${crop.cropName}】`, '浇过水的土颜色变深了。', '原型里为了看得见反馈，会推进一小段生长阶段。']);
+        },
+      };
+    }
+    return {
+      label: '查看',
+      run: () => speak([`【${crop.cropName}】`, '这格今天已经浇过水。', '等时间流逝或睡过一天，它会继续长大。']),
+    };
+  }
+
+  function actionForAnimal(animal) {
+    if (!animal) return null;
+    if (animal.eggReady) {
+      return {
+        label: '捡蛋',
+        run: () => {
+          animal.eggReady = false;
+          game.cash += 4;
+          updateHud();
+          beep(760, 0.1, 'triangle');
+          speak([`【${animal.name}】`, '捡到一枚鸡蛋，暂时折算成 +4。', '正式版会进背包，再由出售箱结算。']);
+        },
+      };
+    }
+    if (!animal.fed) {
+      return {
+        label: '喂鸡',
+        run: () => {
+          if (!spendEnergy(2)) return;
+          animal.fed = true;
+          animal.eggTimer = 480 + Math.floor(Math.random() * 180);
+          beep(520, 0.09, 'square');
+          speak([`【${animal.name}】`, '它把饲料啄干净了，心情明显好了些。', '吃饱以后会在鸡舍范围里活动，并有机会下蛋。']);
+        },
+      };
+    }
+    return {
+      label: '抚摸',
+      run: () => {
+        beep(680, 0.08, 'sine');
+        speak([`【${animal.name}】`, '它舒服地眯了眯眼。', '亲密度系统后面可以接在这里。']);
+      },
+    };
+  }
+
+  function getContextAction() {
+    if (!game.started || dialog.classList.contains('show')) return null;
+    const animal = nearestAnimal();
+    if (animal) return actionForAnimal(animal);
+    const crop = nearestCrop();
+    if (crop) return actionForCrop(crop);
+    return null;
+  }
+
+  function updateActionButton() {
+    currentAction = getContextAction();
+    if (!currentAction) {
+      actionBtn.classList.add('hidden');
+      actionBtn.textContent = '';
+      return;
+    }
+    actionBtn.textContent = currentAction.label;
+    actionBtn.classList.remove('hidden');
+  }
+
+  actionBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!currentAction || dialog.classList.contains('show')) return;
+    const act = currentAction;
+    currentAction = null;
+    actionBtn.classList.add('hidden');
+    act.run();
+  });
+
   // ---------------- 对话 ----------------
   const dialog = $('dialog');
   const dlgPortrait = $('dialog-portrait');
@@ -513,12 +784,15 @@
   function setPortrait(name) {
     let image = 'assets/ui/grandma-portrait.png';
     let size = '86px 86px';
-    if (/小黄|小白|花花|鸡/.test(name)) {
+    if (/^(小黄|小白|花花)$/.test(name)) {
       image = 'assets/xiaomancun/chicken_1.png';
       size = '68px 68px';
-    } else if (/菜地|香草|水井|村务牌|作坊|屋门|鸡舍|村口|外婆家|阿田家|桂嫂家/.test(name)) {
-      image = 'assets/ui/crop-badge.png';
-      size = '72px 72px';
+    } else if (/菜地|小白菜|萝卜|香草|体力不足/.test(name)) {
+      image = 'assets/xiaomancun/plants_sheet.png';
+      size = '96px 32px';
+    } else if (/水井|村务牌|作坊|屋门|鸡舍|村口|外婆家|阿田家|桂嫂家/.test(name)) {
+      image = 'assets/xiaomancun/house.png';
+      size = '86px 62px';
     } else if (name !== '外婆') {
       image = 'assets/xiaomancun/char_down_1.png';
       size = '74px 74px';
@@ -673,18 +947,18 @@
   function drawCrops() {
     const im = imgs.src_plants;
     if (!im) return;
-    for (const bed of MAP.cropBeds) {
-      const r = bed.rect;
-      for (let y = 0; y < r.h; y++) {
-        for (let x = 0; x < r.w; x++) {
-          const stage = bed.stagePattern[(x + y * 2) % bed.stagePattern.length];
-          const sx = clamp(stage, 0, 5) * 16;
-          const wx = tw(r.x + x);
-          const wy = tw(r.y + y);
-          const s = toScreen(wx, wy);
-          ctx.drawImage(im, sx, 0, 16, 16, Math.round(s.x), Math.round(s.y), TILE * SCALE, TILE * SCALE);
-        }
+    for (const crop of crops) {
+      const wx = tw(crop.tx);
+      const wy = tw(crop.ty);
+      const s = toScreen(wx, wy);
+      if (crop.watered && !crop.harvested) {
+        ctx.fillStyle = 'rgba(92, 128, 126, .28)';
+        ctx.fillRect(Math.round(s.x + 2 * SCALE), Math.round(s.y + 10 * SCALE), 12 * SCALE, 4 * SCALE);
       }
+      if (crop.harvested) continue;
+      const sx = clamp(crop.stage, 0, 5) * 16;
+      const sy = Math.min(1, crop.spriteOffset) * 16;
+      ctx.drawImage(im, sx, sy, 16, 16, Math.round(s.x), Math.round(s.y), TILE * SCALE, TILE * SCALE);
     }
   }
 
@@ -717,7 +991,16 @@
     const w = 32 * SCALE;
     const h = 32 * SCALE;
     drawShadow(entity.x, entity.y, 6, 2.5);
+    if (entity.eggReady && imgs.src_eggItem) {
+      ctx.drawImage(imgs.src_eggItem, Math.round(s.x + 6 * SCALE), Math.round(s.y - 3 * SCALE), 10 * SCALE, 10 * SCALE);
+    }
     ctx.drawImage(im, Math.round(s.x - w / 2), Math.round(s.y - h + 7 * SCALE), w, h);
+    if (entity.fed && !entity.eggReady) {
+      ctx.fillStyle = '#f28aa4';
+      ctx.fillRect(Math.round(s.x + 6 * SCALE), Math.round(s.y - 30 * SCALE), 3 * SCALE, 3 * SCALE);
+      ctx.fillRect(Math.round(s.x + 10 * SCALE), Math.round(s.y - 30 * SCALE), 3 * SCALE, 3 * SCALE);
+      ctx.fillRect(Math.round(s.x + 8 * SCALE), Math.round(s.y - 27 * SCALE), 3 * SCALE, 3 * SCALE);
+    }
   }
 
   function drawEntity(entity) {
@@ -841,6 +1124,7 @@
       game.timeMin += dt * 2;
       updateHud();
     }
+    updateActionButton();
     camX = clamp(hero.x * SCALE - STAGE_W / 2, 0, Math.max(0, SCREEN_W - STAGE_W));
     camY = clamp(hero.y * SCALE - STAGE_H / 2, 0, Math.max(0, SCREEN_H - STAGE_H));
 
