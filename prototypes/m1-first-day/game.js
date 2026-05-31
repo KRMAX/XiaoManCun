@@ -46,8 +46,8 @@
   for (const d of ['down', 'left', 'right', 'up']) {
     for (let i = 1; i <= 4; i++) toLoad[`char_${d}_${i}`] = `${MAP.assets.characterDir}char_${d}_${i}.png`;
   }
-  toLoad.char_side_idle_left = `${MAP.assets.characterDir}char_side_idle_left.png?v=4`;
-  toLoad.char_side_idle_right = `${MAP.assets.characterDir}char_side_idle_right.png?v=2`;
+  toLoad.char_side_idle_left = `${MAP.assets.characterDir}char_side_idle_left.png?v=5`;
+  toLoad.char_side_idle_right = `${MAP.assets.characterDir}char_side_idle_right.png?v=3`;
   for (const i of [1, 2, 5, 6, 7, 8]) toLoad[`chicken_${i}`] = `${MAP.assets.animalDir}chicken_${i}.png`;
 
   function loadAll() {
