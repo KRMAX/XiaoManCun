@@ -1044,7 +1044,7 @@
       const x = tw(obj.interact.stand.x);
       const y = tw(obj.interact.stand.y);
       const d = Math.hypot(hero.x - x, hero.y - y);
-      if (d > 140) continue;
+      if (d > 104) continue;
       const type = obj.interact.action && obj.interact.action.type;
       list.push({ action, distance: d, priority: type === 'ship' ? 88 : 64 });
     }
