@@ -46,6 +46,7 @@
   for (const d of ['down', 'left', 'right', 'up']) {
     for (let i = 1; i <= 4; i++) toLoad[`char_${d}_${i}`] = `${MAP.assets.characterDir}char_${d}_${i}.png`;
   }
+  toLoad.char_side_idle_left = `${MAP.assets.characterDir}char_side_idle_left.png`;
   for (const i of [1, 2, 5, 6, 7, 8]) toLoad[`chicken_${i}`] = `${MAP.assets.animalDir}chicken_${i}.png`;
 
   function loadAll() {
@@ -254,10 +255,10 @@
 
   // ---------------- 角色 / 实体 ----------------
   const HERO_SET = {
-    down: { frames: ['char_down_1', 'char_down_2', 'char_down_3', 'char_down_4'], flip: false },
-    up: { frames: ['char_up_1', 'char_up_2', 'char_up_3', 'char_up_4'], flip: false },
-    left: { frames: ['char_right_1', 'char_right_2', 'char_right_3', 'char_right_4'], flip: false },
-    right: { frames: ['char_right_1', 'char_right_2', 'char_right_3', 'char_right_4'], flip: true },
+    down: { frames: ['char_down_1', 'char_down_2', 'char_down_3', 'char_down_4'], idle: 'char_down_1', flip: false },
+    up: { frames: ['char_up_1', 'char_up_2', 'char_up_3', 'char_up_4'], idle: 'char_up_1', flip: false },
+    left: { frames: ['char_right_1', 'char_right_2', 'char_right_3', 'char_right_4'], idle: 'char_side_idle_left', flip: false },
+    right: { frames: ['char_right_1', 'char_right_2', 'char_right_3', 'char_right_4'], idle: 'char_side_idle_left', flip: true },
   };
   const CHICKEN_SET = ['chicken_1', 'chicken_2', 'chicken_5', 'chicken_6'];
 
@@ -972,8 +973,8 @@
 
   function drawCharacterAt(entity) {
     const set = HERO_SET[entity.dir] || HERO_SET.down;
-    const idx = entity.moving ? Math.floor(entity.anim) % set.frames.length : 0;
-    const im = imgs[set.frames[idx]] || imgs.char_down_1;
+    const frameKey = entity.moving ? set.frames[Math.floor(entity.anim) % set.frames.length] : set.idle;
+    const im = imgs[frameKey] || imgs.char_down_1;
     if (!im) return;
     const s = toScreen(entity.x, entity.y);
     const w = 48 * SCALE * (entity.kind === 'hero' ? HERO_SCALE : 1);
