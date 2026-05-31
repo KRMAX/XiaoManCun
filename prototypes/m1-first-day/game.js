@@ -287,6 +287,7 @@
     tx: tw(e.x),
     ty: tw(e.y),
     dir: e.dir || 'down',
+    facing: e.dir === 'right' ? 'right' : 'left',
     anim: i * 0.7,
     wait: 30 + i * 20,
     moving: false,
@@ -481,6 +482,7 @@
           e.x = nx;
           e.y = ny;
           e.moving = true;
+          if (Math.abs(vx) > 0.05) e.facing = vx > 0 ? 'right' : 'left';
           e.dir = Math.abs(vx) > Math.abs(vy) ? (vx > 0 ? 'right' : 'left') : (vy > 0 ? 'down' : 'up');
         } else {
           e.tx = e.x;
@@ -1007,7 +1009,17 @@
     if (entity.eggReady && imgs.src_eggItem) {
       ctx.drawImage(imgs.src_eggItem, Math.round(s.x + 6 * SCALE), Math.round(s.y - 3 * SCALE), 10 * SCALE, 10 * SCALE);
     }
-    ctx.drawImage(im, Math.round(s.x - w / 2), Math.round(s.y - h + 7 * SCALE), w, h);
+    const x = Math.round(s.x - w / 2);
+    const y = Math.round(s.y - h + 7 * SCALE);
+    if (entity.facing === 'right') {
+      ctx.save();
+      ctx.translate(x + w, y);
+      ctx.scale(-1, 1);
+      ctx.drawImage(im, 0, 0, w, h);
+      ctx.restore();
+    } else {
+      ctx.drawImage(im, x, y, w, h);
+    }
     if (entity.fed && !entity.eggReady) {
       ctx.fillStyle = '#f28aa4';
       ctx.fillRect(Math.round(s.x + 6 * SCALE), Math.round(s.y - 30 * SCALE), 3 * SCALE, 3 * SCALE);
