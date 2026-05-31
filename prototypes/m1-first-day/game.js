@@ -257,7 +257,7 @@
     down: ['char_down_1', 'char_down_2', 'char_down_3', 'char_down_4'],
     up: ['char_up_1', 'char_up_2', 'char_up_3', 'char_up_4'],
     left: ['char_right_1', 'char_right_2', 'char_right_3', 'char_right_4'],
-    right: ['char_left_1', 'char_left_2', 'char_left_3', 'char_left_4'],
+    right: ['char_left_1', 'char_left_3'],
   };
   const CHICKEN_SET = ['chicken_1', 'chicken_2', 'chicken_5', 'chicken_6'];
 
