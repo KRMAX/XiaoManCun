@@ -80,6 +80,25 @@ window.XMC_MAPS.village = {
     radish: { name: '萝卜', maxStage: 3, value: 10, spriteOffset: 1 },
     herb: { name: '香草', maxStage: 3, value: 6, spriteOffset: 2 },
   },
+  items: {
+    egg: { name: '鸡蛋', icon: 'egg', value: 4, shippable: true },
+    bokchoy: { name: '小白菜', icon: 'crop', value: 8, shippable: true },
+    radish: { name: '萝卜', icon: 'crop', value: 10, shippable: true },
+    herb: { name: '香草', icon: 'crop', value: 6, shippable: true },
+    seed_bokchoy: { name: '白菜种子', icon: 'seed', crop: 'bokchoy' },
+    feed: { name: '鸡饲料', icon: 'feed' },
+  },
+  startingInventory: {
+    seed_bokchoy: 8,
+    feed: 6,
+  },
+  goals: [
+    { id: 'water', label: '浇水', target: 3 },
+    { id: 'harvest', label: '收获', target: 1 },
+    { id: 'collectEgg', label: '捡蛋', target: 1 },
+    { id: 'feedAnimal', label: '喂鸡', target: 1 },
+    { id: 'ship', label: '出货', target: 1 },
+  ],
   terrain: {
     base: 'grassA',
     detailTiles: ['grassA', 'grassB', 'grassC', 'grassFlower'],
@@ -237,6 +256,7 @@ window.XMC_MAPS.village = {
     { id: 'field-fence-n', kind: 'fence', name: '田边竹篱', x: 19, y: 26, w: 28, h: 1, collision: [{ x: 19, y: 26, w: 28, h: 0.7 }] },
     { id: 'well', kind: 'well', name: '水井', x: 38, y: 19, w: 2, h: 2, collision: [{ x: 38.2, y: 19.4, w: 1.6, h: 1.4 }], interact: { name: '水井', rect: { x: 37.6, y: 18.8, w: 3, h: 3 }, stand: { x: 37, y: 21.5 }, lines: ['【水井】', '井水很凉，桶沿被磨得发亮。', '后续浇水会从这里或水塘取水。'] } },
     { id: 'notice-board', kind: 'sign', name: '村务牌', x: 43, y: 22, w: 2, h: 2, collision: [{ x: 43.2, y: 22.4, w: 1.6, h: 1.4 }], interact: { name: '村务牌', rect: { x: 42.7, y: 21.7, w: 3, h: 3 }, stand: { x: 42.3, y: 24.4 }, lines: ['【村务牌】', '今日：熟悉小满村，认识邻居。', '这里以后挂每日委托和节日公告。'] } },
+    { id: 'shipping-bin', kind: 'shippingBin', name: '出货箱', x: 12.5, y: 12.6, w: 2, h: 2, collision: [{ x: 12.7, y: 13.2, w: 1.6, h: 1.1 }], interact: { name: '出货箱', rect: { x: 11.8, y: 11.9, w: 3.2, h: 3.3 }, stand: { x: 14.2, y: 14.8 }, action: { type: 'ship', label: '出货' }, lines: ['【出货箱】', '把鸡蛋和蔬菜放进去，第二天前就能结算。', '现在原型里会立即结算背包里的可出货物。'] } },
     { id: 'peach-tree-home', kind: 'tree', name: '桃树', x: 15, y: 7, w: 4, h: 5, collision: [{ x: 16, y: 10.8, w: 1.8, h: 1.8 }] },
     { id: 'bamboo-clump', kind: 'tree', name: '竹丛', x: 1, y: 13, w: 4, h: 7, collision: [{ x: 2, y: 17.8, w: 1.8, h: 2 }] },
     { id: 'road-tree', kind: 'tree', name: '槐树', x: 58, y: 16, w: 4, h: 5, collision: [{ x: 59, y: 19.8, w: 1.8, h: 1.8 }] },

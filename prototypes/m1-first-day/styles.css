@@ -114,6 +114,51 @@ html, body {
   white-space: normal;
 }
 
+/* ---------- 背包 / 今日目标 ---------- */
+#status-panel {
+  position: absolute;
+  left: 22px;
+  bottom: 26px;
+  z-index: 12;
+  width: 258px;
+  display: grid;
+  gap: 8px;
+  pointer-events: none;
+}
+#bag-list, #goal-list {
+  display: grid;
+  gap: 6px;
+}
+.status-row {
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border: 2px solid rgba(145, 122, 54, .62);
+  border-radius: 8px;
+  background: rgba(82, 67, 31, .82);
+  color: #fff2bd;
+  font-size: 16px;
+  font-weight: 900;
+  text-shadow: 0 2px 0 rgba(55, 43, 20, .36);
+  box-shadow: 0 4px 0 rgba(122, 95, 39, .28);
+}
+.status-icon {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  image-rendering: pixelated;
+}
+.status-icon.seed { background: linear-gradient(135deg, #d7a557 0 45%, #7fa347 45% 100%); border-radius: 50% 50% 45% 45%; }
+.status-icon.feed { background: linear-gradient(#f3c253 0 6px, #c88732 6px 18px); border-radius: 3px; }
+.status-icon.egg { background: radial-gradient(circle at 48% 45%, #fff5cf 0 8px, #e6cf93 9px 14px, transparent 15px); }
+.status-icon.crop { background: linear-gradient(#8bc566 0 8px, #5d9a43 8px 13px, #7b4d2a 13px 18px); border-radius: 3px 3px 5px 5px; }
+.status-icon.goal { background: linear-gradient(90deg, #fff2bd 0 5px, transparent 5px), linear-gradient(#9dbf57 0 18px); border-radius: 3px; }
+.status-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.status-count { flex: 0 0 auto; color: #f4d56f; }
+.status-done { opacity: .62; }
+
 /* ---------- 对话框 ---------- */
 #dialog {
   position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%);

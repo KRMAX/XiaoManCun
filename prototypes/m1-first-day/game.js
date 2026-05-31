@@ -22,6 +22,8 @@
   const canvas = $('scene');
   const ctx = canvas.getContext('2d');
   const actionBtn = $('action-btn');
+  const bagList = $('bag-list');
+  const goalList = $('goal-list');
 
   function fit() {
     const s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
@@ -567,21 +569,6 @@
     return crops.find((c) => c.tx === tx && c.ty === ty) || null;
   }
 
-  function nearestCrop(maxDist = 50) {
-    let best = null;
-    let bestDist = Infinity;
-    for (const c of crops) {
-      const x = tw(c.tx + 0.5);
-      const y = tw(c.ty + 0.5);
-      const d = Math.hypot(hero.x - x, hero.y - y);
-      if (d < bestDist && d <= maxDist) {
-        best = c;
-        bestDist = d;
-      }
-    }
-    return best;
-  }
-
   function cropActionPriority(crop) {
     if (!crop || crop.owner !== 'player') return 50;
     if (crop.harvested) return 82;
@@ -597,20 +584,6 @@
       const db = Math.hypot(ox - b.x, oy - b.y);
       return da - db;
     });
-  }
-
-  function nearestAnimal(maxDist = 70) {
-    let best = null;
-    let bestDist = Infinity;
-    for (const e of entities) {
-      if (e.type !== 'animal') continue;
-      const d = Math.hypot(hero.x - e.x, hero.y - e.y);
-      if (d < bestDist && d <= maxDist) {
-        best = e;
-        bestDist = d;
-      }
-    }
-    return best;
   }
 
   function cropBedLines(bed) {
@@ -724,7 +697,19 @@
   }
 
   // ---------------- 状态 / HUD ----------------
-  const game = { day: 1, cash: 0, energy: 100, started: false, t: 0, timeMin: 6 * 60, audio: null };
+  const itemDefs = MAP.items || {};
+  const goalDefs = MAP.goals || [];
+  const game = {
+    day: 1,
+    cash: 0,
+    energy: 100,
+    started: false,
+    t: 0,
+    timeMin: 6 * 60,
+    audio: null,
+    inventory: { ...(MAP.startingInventory || {}) },
+    goals: Object.fromEntries(goalDefs.map((g) => [g.id, 0])),
+  };
   function beep(f, d, ty) {
     try {
       if (!game.audio) game.audio = new (window.AudioContext || window.webkitAudioContext)();
@@ -753,6 +738,60 @@
     $('chip-weather').textContent = fmtTime();
     $('chip-cash').textContent = String(game.cash);
     $('chip-energy').textContent = String(game.energy);
+    updateStatusPanel();
+  }
+
+  function itemName(id) {
+    return (itemDefs[id] && itemDefs[id].name) || id;
+  }
+
+  function itemIcon(id) {
+    return (itemDefs[id] && itemDefs[id].icon) || 'crop';
+  }
+
+  function itemCount(id) {
+    return game.inventory[id] || 0;
+  }
+
+  function addItem(id, qty = 1) {
+    game.inventory[id] = itemCount(id) + qty;
+    updateStatusPanel();
+  }
+
+  function removeItem(id, qty = 1) {
+    if (itemCount(id) < qty) return false;
+    game.inventory[id] -= qty;
+    if (game.inventory[id] <= 0) delete game.inventory[id];
+    updateStatusPanel();
+    return true;
+  }
+
+  function trackGoal(id, amount = 1) {
+    if (!(id in game.goals)) return;
+    const def = goalDefs.find((g) => g.id === id);
+    game.goals[id] = Math.min((def && def.target) || Infinity, game.goals[id] + amount);
+    updateStatusPanel();
+  }
+
+  function resetGoals() {
+    game.goals = Object.fromEntries(goalDefs.map((g) => [g.id, 0]));
+    updateStatusPanel();
+  }
+
+  function updateStatusPanel() {
+    if (!bagList || !goalList) return;
+    const visibleItems = Object.entries(game.inventory)
+      .filter(([, qty]) => qty > 0)
+      .sort(([a], [b]) => itemName(a).localeCompare(itemName(b), 'zh-CN'))
+      .slice(0, 5);
+    bagList.innerHTML = visibleItems.length
+      ? visibleItems.map(([id, qty]) => `<div class="status-row"><span class="status-icon ${itemIcon(id)}"></span><span class="status-name">${itemName(id)}</span><span class="status-count">x${qty}</span></div>`).join('')
+      : '<div class="status-row"><span class="status-icon seed"></span><span class="status-name">背包</span><span class="status-count">空</span></div>';
+    goalList.innerHTML = goalDefs.map((goal) => {
+      const value = game.goals[goal.id] || 0;
+      const done = value >= goal.target;
+      return `<div class="status-row ${done ? 'status-done' : ''}"><span class="status-icon goal"></span><span class="status-name">${goal.label}</span><span class="status-count">${Math.min(value, goal.target)}/${goal.target}</span></div>`;
+    }).join('');
   }
 
   function advanceDay() {
@@ -796,6 +835,7 @@
       e.wait = 45;
     }
     game.day += 1;
+    resetGoals();
     game.timeMin = 6 * 60;
     game.energy = 100;
     hero.x = tw(MAP.player.spawn.x);
@@ -838,7 +878,13 @@
       return {
         label: '播种',
         run: () => {
+          const seedId = `seed_${crop.crop}`;
+          if (itemCount(seedId) < 1) {
+            speak(['【种子不足】', `背包里没有${itemName(seedId)}。`, '先把已有作物照顾好，后面会从商店或任务获得更多种子。']);
+            return;
+          }
           if (!spendEnergy(1)) return;
+          removeItem(seedId, 1);
           crop.harvested = false;
           crop.stage = 1;
           crop.growth = 0;
@@ -855,14 +901,15 @@
       return {
         label: '收获',
         run: () => {
+          addItem(crop.crop, 1);
+          trackGoal('harvest');
           crop.harvested = true;
           crop.watered = false;
           crop.wateredToday = null;
           syncCropState(crop);
-          game.cash += crop.value;
           updateHud();
           beep(720, 0.12, 'triangle');
-          speak([`【${crop.cropName}】`, `收获一份${crop.cropName}，卖出 +${crop.value}。`, '作物从数据状态里被移除，地块空出来了。']);
+          speak([`【${crop.cropName}】`, `收获一份${crop.cropName}，放进背包。`, '拿去出货箱才能换成现金。']);
         },
       };
     }
@@ -874,6 +921,7 @@
           crop.watered = true;
           crop.wateredToday = game.day;
           syncCropState(crop);
+          trackGoal('water');
           beep(620, 0.1, 'sine');
           speak([`【${crop.cropName}】`, '浇过水的土颜色变深了。', '睡过一天后，它会按作物状态层继续生长。']);
         },
@@ -892,10 +940,11 @@
         label: '捡蛋',
         run: () => {
           animal.eggReady = false;
-          game.cash += 4;
+          addItem('egg', 1);
+          trackGoal('collectEgg');
           updateHud();
           beep(760, 0.1, 'triangle');
-          speak([`【${animal.name}】`, '捡到一枚鸡蛋，暂时折算成 +4。', '正式版会进背包，再由出售箱结算。']);
+          speak([`【${animal.name}】`, '捡到一枚鸡蛋，放进背包。', '拿去出货箱可以卖钱。']);
         },
       };
     }
@@ -903,9 +952,15 @@
       return {
         label: '喂鸡',
         run: () => {
+          if (itemCount('feed') < 1) {
+            speak(['【鸡饲料】', '背包里没有鸡饲料了。', '正式版会从磨坊、商店或草料仓补充。']);
+            return;
+          }
           if (!spendEnergy(2)) return;
+          removeItem('feed', 1);
           animal.fed = true;
           animal.eggTimer = 480 + Math.floor(Math.random() * 180);
+          trackGoal('feedAnimal');
           beep(520, 0.09, 'square');
           speak([`【${animal.name}】`, '它把饲料啄干净了，心情明显好了些。', '吃饱以后会在鸡舍范围里活动，并有机会下蛋。']);
         },
@@ -928,7 +983,40 @@
         run: advanceDay,
       };
     }
+    if (obj.interact.action.type === 'ship') {
+      if (!hasShippableItems()) return null;
+      return {
+        label: obj.interact.action.label || '出货',
+        run: shipInventory,
+      };
+    }
     return null;
+  }
+
+  function hasShippableItems() {
+    return Object.entries(game.inventory).some(([id, qty]) => itemDefs[id] && itemDefs[id].shippable && qty > 0);
+  }
+
+  function shipInventory() {
+    let total = 0;
+    const shipped = [];
+    for (const [id, qty] of Object.entries({ ...game.inventory })) {
+      const item = itemDefs[id];
+      if (!item || !item.shippable || qty <= 0) continue;
+      const value = item.value || 0;
+      total += value * qty;
+      shipped.push(`${item.name} x${qty}`);
+      removeItem(id, qty);
+    }
+    if (!shipped.length) {
+      speak(['【出货箱】', '背包里没有可以出货的东西。', '鸡蛋、蔬菜和香草成熟后都可以放进来卖。']);
+      return;
+    }
+    game.cash += total;
+    trackGoal('ship', shipped.length);
+    updateHud();
+    beep(760, 0.12, 'triangle');
+    speak(['【出货箱】', `${shipped.join('、')}，合计 +${total}。`, '出货箱现在已经接入背包和现金结算。']);
   }
 
   function contextActionCandidates() {
@@ -956,8 +1044,9 @@
       const x = tw(obj.interact.stand.x);
       const y = tw(obj.interact.stand.y);
       const d = Math.hypot(hero.x - x, hero.y - y);
-      if (d > 56) continue;
-      list.push({ action, distance: d, priority: 64 });
+      if (d > 140) continue;
+      const type = obj.interact.action && obj.interact.action.type;
+      list.push({ action, distance: d, priority: type === 'ship' ? 88 : 64 });
     }
     return list.sort((a, b) => (b.priority - a.priority) || (a.distance - b.distance));
   }
@@ -979,14 +1068,18 @@
     actionBtn.classList.remove('hidden');
   }
 
-  actionBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  function runCurrentAction() {
     if (!currentAction || dialog.classList.contains('show')) return;
     const act = currentAction;
     currentAction = null;
     actionBtn.classList.add('hidden');
     act.run();
+  }
+
+  actionBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    runCurrentAction();
   });
 
   // ---------------- 对话 ----------------
@@ -1081,7 +1174,14 @@
     }
     setDestination(p.x, p.y, null);
   });
-  window.addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; });
+  window.addEventListener('keydown', (e) => {
+    const key = e.key.toLowerCase();
+    keys[key] = true;
+    if (key === 'e' || key === ' ') {
+      e.preventDefault();
+      runCurrentAction();
+    }
+  });
   window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 
   // ---------------- 绘制：对象 / 植物 / 实体 ----------------
@@ -1137,6 +1237,16 @@
     drawWorldRect(x + 8, y + 4, 17, 3, '#6d4325');
   }
 
+  function drawShippingBin(obj) {
+    const x = tw(obj.x);
+    const y = tw(obj.y);
+    drawWorldRect(x + 4, y + 11, 24, 17, '#8a562b');
+    drawWorldRect(x + 2, y + 7, 28, 8, '#b77737');
+    drawWorldRect(x + 5, y + 9, 22, 2, '#e2b264');
+    drawWorldRect(x + 9, y + 15, 14, 3, '#5b371f');
+    drawWorldRect(x + 6, y + 27, 20, 3, '#5b371f');
+  }
+
   function drawSign(obj) {
     const x = tw(obj.x);
     const y = tw(obj.y);
@@ -1157,6 +1267,7 @@
     else if (obj.kind === 'fence') drawFence(obj);
     else if (obj.kind === 'tree') drawTree(obj);
     else if (obj.kind === 'well') drawWell(obj);
+    else if (obj.kind === 'shippingBin') drawShippingBin(obj);
     else if (obj.kind === 'sign') drawSign(obj);
   }
 
