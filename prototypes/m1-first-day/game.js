@@ -157,12 +157,24 @@
       });
     }
   }
+  const toWorldRect = (r) => ({ x: tw(r.x), y: tw(r.y), w: tw(r.w), h: tw(r.h) });
+  const navAllowRects = (MAP.navigation.walkableAreas || []).map(toWorldRect);
+  const navBlockRects = (MAP.navigation.blockedAreas || []).map(toWorldRect);
+  const navPassRects = (MAP.navigation.passableAreas || []).map(toWorldRect);
+  const animalAreaMap = new Map((MAP.animalAreas || []).map((area) => [area.id, area]));
 
   function pointInRect(x, y, r) {
     return x >= r.x && y >= r.y && x <= r.x + r.w && y <= r.y + r.h;
   }
 
+  function navigationAllows(x, y) {
+    if (navAllowRects.length && !navAllowRects.some((r) => pointInRect(x, y, r))) return false;
+    if (navBlockRects.some((r) => pointInRect(x, y, r)) && !navPassRects.some((r) => pointInRect(x, y, r))) return false;
+    return true;
+  }
+
   function blockedPoint(x, y) {
+    if (!navigationAllows(x, y)) return true;
     const tx = Math.floor(x / TILE);
     const ty = Math.floor(y / TILE);
     if (tileBlocks(tx, ty)) return true;
@@ -295,6 +307,9 @@
 
   const cropTypes = MAP.cropTypes || {};
   const crops = [];
+  function syncCropState(crop) {
+    crop.state = crop.harvested ? 'empty' : (crop.stage >= crop.maxStage ? 'ready' : 'growing');
+  }
   for (const bed of MAP.cropBeds) {
     const type = cropTypes[bed.crop] || { name: bed.crop, maxStage: 3, value: 5, spriteOffset: 0 };
     for (let y = 0; y < bed.rect.h; y++) {
@@ -302,7 +317,7 @@
         const idx = x + y * bed.rect.w;
         const stagePattern = bed.stagePattern || [1];
         const waterPattern = bed.wateredPattern || [];
-        crops.push({
+        const crop = {
           id: `${bed.id}-${x}-${y}`,
           bedId: bed.id,
           bed,
@@ -315,9 +330,16 @@
           ty: bed.rect.y + y,
           stage: Math.min(type.maxStage, stagePattern[(x + y * 2) % stagePattern.length]),
           watered: !!waterPattern[idx % Math.max(1, waterPattern.length)],
+          wateredToday: waterPattern.length && waterPattern[idx % waterPattern.length] ? 1 : null,
+          plantedDay: 1,
+          growth: 0,
           harvested: false,
+          state: 'growing',
           owner: bed.owner || 'player',
-        });
+        };
+        crop.growth = Math.max(0, crop.stage - 1);
+        syncCropState(crop);
+        crops.push(crop);
       }
     }
   }
@@ -400,11 +422,13 @@
   function activeSchedule(entity) {
     if (!entity.schedule || !entity.schedule.length) return null;
     const min = Math.floor(game.timeMin) % 1440;
+    let last = entity.schedule[entity.schedule.length - 1];
     for (let i = 0; i < entity.schedule.length; i++) {
       const slot = entity.schedule[i];
       if (min >= slot.from && min < slot.to) return { ...slot, index: i };
+      if (min >= slot.from) last = slot;
     }
-    return { ...entity.schedule[0], index: 0 };
+    return { ...last, index: entity.schedule.indexOf(last) };
   }
 
   function stepEntityTo(entity, targetX, targetY, speed) {
@@ -452,9 +476,34 @@
 
   function animalCanStand(entity, x, y) {
     if (!walk(x, y)) return false;
-    if (!entity.roam) return true;
-    const r = entity.roam;
+    const area = animalArea(entity);
+    if (!area) return true;
+    const r = area.rect || area;
     return x >= tw(r.x) && y >= tw(r.y) && x <= tw(r.x + r.w) && y <= tw(r.y + r.h);
+  }
+
+  function animalArea(entity) {
+    if (entity.activityArea && animalAreaMap.has(entity.activityArea)) return animalAreaMap.get(entity.activityArea);
+    return entity.roam ? { id: `${entity.id}-roam`, rect: entity.roam, behavior: {} } : null;
+  }
+
+  function chooseAnimalTarget(entity) {
+    const area = animalArea(entity);
+    if (!area) return;
+    const behavior = area.behavior || {};
+    const sleepFrom = behavior.sleepFrom ?? 1080;
+    const min = Math.floor(game.timeMin) % 1440;
+    if (area.home && min >= sleepFrom) {
+      entity.tx = tw(area.home.x);
+      entity.ty = tw(area.home.y);
+      return;
+    }
+    const r = area.rect;
+    const seed = hash(Math.floor(game.t * 10), Math.floor(entity.x), entity.id.length + game.day);
+    entity.tx = tw(r.x) + (seed % Math.max(1, Math.floor(r.w * TILE)));
+    entity.ty = tw(r.y) + ((seed >> 8) % Math.max(1, Math.floor(r.h * TILE)));
+    const waitRange = behavior.roamWait || [45, 90];
+    entity.wait = waitRange[0] + (seed % Math.max(1, waitRange[1] - waitRange[0]));
   }
 
   function updateEntities() {
@@ -475,7 +524,8 @@
       if (d > 1) {
         const vx = dx / d;
         const vy = dy / d;
-        const speed = 0.32;
+        const area = animalArea(e);
+        const speed = (area && area.behavior && area.behavior.roamSpeed) || 0.32;
         const nx = e.x + vx * speed;
         const ny = e.y + vy * speed;
         if (animalCanStand(e, nx, ny)) {
@@ -491,12 +541,7 @@
       } else {
         e.moving = false;
         e.wait -= 1;
-        if (e.wait <= 0 && e.roam) {
-          const seed = hash(Math.floor(game.t * 10), Math.floor(e.x), e.id.length);
-          e.tx = tw(e.roam.x) + (seed % Math.floor(e.roam.w * TILE));
-          e.ty = tw(e.roam.y) + ((seed >> 8) % Math.floor(e.roam.h * TILE));
-          e.wait = 45 + (seed % 90);
-        }
+        if (e.wait <= 0 && animalArea(e)) chooseAnimalTarget(e);
       }
     }
   }
@@ -504,6 +549,18 @@
   // ---------------- 交互命中 ----------------
   function interactRectWorld(rect) {
     return { x: tw(rect.x), y: tw(rect.y), w: tw(rect.w), h: tw(rect.h) };
+  }
+
+  function standNearTile(tx, ty) {
+    const points = [
+      { x: tw(tx + 0.5), y: tw(ty + 1.15) },
+      { x: tw(tx - 0.15), y: tw(ty + 0.55) },
+      { x: tw(tx + 1.15), y: tw(ty + 0.55) },
+      { x: tw(tx + 0.5), y: tw(ty - 0.15) },
+    ].filter((p) => walk(p.x, p.y));
+    if (!points.length) return { x: tw(tx + 0.5), y: tw(ty + 0.5) };
+    points.sort((a, b) => Math.hypot(hero.x - a.x, hero.y - a.y) - Math.hypot(hero.x - b.x, hero.y - b.y));
+    return points[0];
   }
 
   function cropAtTile(tx, ty) {
@@ -523,6 +580,23 @@
       }
     }
     return best;
+  }
+
+  function cropActionPriority(crop) {
+    if (!crop || crop.owner !== 'player') return 50;
+    if (crop.harvested) return 82;
+    if (crop.stage >= crop.maxStage) return 120;
+    if (!crop.watered) return 104;
+    return 60;
+  }
+
+  function sortInteractTargets(items, ox = hero.x, oy = hero.y) {
+    return items.sort((a, b) => {
+      if (b.priority !== a.priority) return b.priority - a.priority;
+      const da = Math.hypot(ox - a.x, oy - a.y);
+      const db = Math.hypot(ox - b.x, oy - b.y);
+      return da - db;
+    });
   }
 
   function nearestAnimal(maxDist = 70) {
@@ -551,70 +625,102 @@
     ];
   }
 
+  function cropLines(crop) {
+    if (crop.harvested) return [`【${crop.cropName}】`, '这格地空出来了，可以重新播种。'];
+    const state = crop.stage >= crop.maxStage ? '已经成熟' : `第 ${crop.stage}/${crop.maxStage} 阶段`;
+    const water = crop.watered ? '今天浇过水' : '今天还没浇水';
+    return [`【${crop.cropName}】`, `${state}，${water}。`, '作物状态来自单格数据层，睡过一天后会按浇水情况成长。'];
+  }
+
   function entityLines(entity) {
-    if (entity.type !== 'animal') return entity.dialogue || [`【${entity.name}】`, '……'];
+    if (entity.type !== 'animal') {
+      const base = entity.dialogue || [`【${entity.name}】`, '……'];
+      const slot = activeSchedule(entity);
+      if (!slot || !slot.activity) return base;
+      return [base[0], `现在：${slot.activity}。`, ...base.slice(1)];
+    }
     if (entity.eggReady) return [`【${entity.name}】`, '草窝旁边有一枚热乎乎的鸡蛋。', '靠近它可以捡蛋。'];
     if (!entity.fed) return [`【${entity.name}】`, '它在地上啄来啄去，看起来还没吃饱。', '靠近它可以喂鸡。'];
     return [`【${entity.name}】`, '它吃饱了，慢慢在鸡舍边散步。', '等一会儿可能会下蛋。'];
   }
 
   function hitInteract(x, y) {
+    const hits = [];
+    const tileCrop = cropAtTile(Math.floor(x / TILE), Math.floor(y / TILE));
+    if (tileCrop) {
+      const stand = standNearTile(tileCrop.tx, tileCrop.ty);
+      hits.push({
+        kind: 'crop',
+        priority: cropActionPriority(tileCrop),
+        name: tileCrop.cropName,
+        x: stand.x,
+        y: stand.y,
+        lines: cropLines(tileCrop),
+      });
+    }
+    for (const e of entities) {
+      const r = { x: e.x - 14, y: e.y - 32, w: 28, h: 36 };
+      if (pointInRect(x, y, r)) {
+        hits.push({
+          kind: e.type,
+          priority: e.type === 'animal' ? 110 : 76,
+          name: e.name,
+          x: e.x,
+          y: e.y + 18,
+          lines: entityLines(e),
+        });
+      }
+    }
     for (const obj of MAP.objects) {
       if (!obj.interact) continue;
       const r = interactRectWorld(obj.interact.rect);
       if (pointInRect(x, y, r)) {
-        return {
+        hits.push({
+          kind: 'object',
+          priority: obj.interact.action ? 70 : 56,
           name: obj.interact.name || obj.name,
           x: tw(obj.interact.stand.x),
           y: tw(obj.interact.stand.y),
           lines: obj.interact.lines,
-        };
+          object: obj,
+        });
       }
     }
     for (const bed of MAP.cropBeds) {
       const r = interactRectWorld(bed.rect);
       if (pointInRect(x, y, r)) {
-        return {
+        hits.push({
+          kind: 'crop-bed',
+          priority: 42,
           name: bed.name,
           x: tw(bed.stand.x),
           y: tw(bed.stand.y),
           lines: cropBedLines(bed),
-        };
-      }
-    }
-    for (const e of entities) {
-      const r = { x: e.x - 14, y: e.y - 32, w: 28, h: 36 };
-      if (pointInRect(x, y, r)) {
-        return {
-          name: e.name,
-          x: e.x,
-          y: e.y + 18,
-          lines: entityLines(e),
-        };
+        });
       }
     }
     for (const p of MAP.portals || []) {
       const r = interactRectWorld(p.rect);
       if (pointInRect(x, y, r)) {
-        return { name: p.name, x: tw(p.stand.x), y: tw(p.stand.y), lines: p.lines };
+        hits.push({ kind: 'portal', priority: 30, name: p.name, x: tw(p.stand.x), y: tw(p.stand.y), lines: p.lines });
       }
     }
-    return null;
+    return sortInteractTargets(hits, x, y)[0] || null;
   }
 
   function nearbyInteracts() {
     const list = [];
-    const push = (name, x, y, lines) => {
-      if (Math.hypot(hero.x - x, hero.y - y) < 64) list.push({ name, x, y, lines });
+    const push = (name, x, y, lines, priority = 0) => {
+      if (Math.hypot(hero.x - x, hero.y - y) < 64) list.push({ name, x, y, lines, priority });
     };
     for (const obj of MAP.objects) {
       if (!obj.interact) continue;
-      push(obj.interact.name || obj.name, tw(obj.interact.stand.x), tw(obj.interact.stand.y), obj.interact.lines);
+      push(obj.interact.name || obj.name, tw(obj.interact.stand.x), tw(obj.interact.stand.y), obj.interact.lines, obj.interact.action ? 70 : 56);
     }
-    for (const bed of MAP.cropBeds) push(bed.name, tw(bed.stand.x), tw(bed.stand.y), cropBedLines(bed));
-    for (const e of entities) push(e.name, e.x, e.y, entityLines(e));
-    for (const p of MAP.portals || []) push(p.name, tw(p.stand.x), tw(p.stand.y), p.lines);
-    return list;
+    for (const bed of MAP.cropBeds) push(bed.name, tw(bed.stand.x), tw(bed.stand.y), cropBedLines(bed), 42);
+    for (const e of entities) push(e.name, e.x, e.y, entityLines(e), e.type === 'animal' ? 110 : 76);
+    for (const p of MAP.portals || []) push(p.name, tw(p.stand.x), tw(p.stand.y), p.lines, 30);
+    return sortInteractTargets(list).slice(0, 5);
   }
 
   // ---------------- 状态 / HUD ----------------
@@ -649,6 +755,66 @@
     $('chip-energy').textContent = String(game.energy);
   }
 
+  function advanceDay() {
+    let grew = 0;
+    let ready = 0;
+    for (const crop of crops) {
+      if (crop.harvested) {
+        syncCropState(crop);
+        continue;
+      }
+      if (crop.watered && crop.stage < crop.maxStage) {
+        crop.stage += 1;
+        crop.growth += 1;
+        grew += 1;
+      }
+      crop.watered = false;
+      crop.wateredToday = null;
+      syncCropState(crop);
+      if (crop.state === 'ready') ready += 1;
+    }
+    let eggs = 0;
+    for (const e of entities) {
+      e.moving = false;
+      e.path = null;
+      e.pathTarget = null;
+      e.scheduleIndex = null;
+      if (e.type !== 'animal') continue;
+      if (e.fed && !e.eggReady) {
+        e.eggReady = true;
+        eggs += 1;
+      }
+      e.fed = false;
+      e.eggTimer = 0;
+      const area = animalArea(e);
+      if (area && area.home) {
+        e.x = tw(area.home.x);
+        e.y = tw(area.home.y);
+        e.tx = e.x;
+        e.ty = e.y;
+      }
+      e.wait = 45;
+    }
+    game.day += 1;
+    game.timeMin = 6 * 60;
+    game.energy = 100;
+    hero.x = tw(MAP.player.spawn.x);
+    hero.y = tw(MAP.player.spawn.y);
+    hero.tx = hero.x;
+    hero.ty = hero.y;
+    hero.dir = MAP.player.spawn.dir || 'down';
+    hero.useTarget = false;
+    path = [];
+    pendingInteract = null;
+    updateHud();
+    beep(560, 0.14, 'triangle');
+    speak([
+      '【新的一天】',
+      `睡了一觉，${grew} 格作物继续生长，${ready} 格作物已经成熟。`,
+      eggs ? `鸡舍里多了 ${eggs} 枚新蛋，记得去看看。` : '鸡舍里安安静静，今天也要记得喂鸡。',
+    ]);
+  }
+
   let currentAction = null;
   function spendEnergy(cost) {
     if (game.energy < cost) {
@@ -675,7 +841,11 @@
           if (!spendEnergy(1)) return;
           crop.harvested = false;
           crop.stage = 1;
+          crop.growth = 0;
+          crop.plantedDay = game.day;
           crop.watered = false;
+          crop.wateredToday = null;
+          syncCropState(crop);
           beep(520, 0.09, 'triangle');
           speak([`【${crop.cropName}】`, '把新种子按进土里。', '这格地重新进入生长状态。']);
         },
@@ -687,6 +857,8 @@
         run: () => {
           crop.harvested = true;
           crop.watered = false;
+          crop.wateredToday = null;
+          syncCropState(crop);
           game.cash += crop.value;
           updateHud();
           beep(720, 0.12, 'triangle');
@@ -700,9 +872,10 @@
         run: () => {
           if (!spendEnergy(2)) return;
           crop.watered = true;
-          crop.stage = Math.min(crop.maxStage, crop.stage + 1);
+          crop.wateredToday = game.day;
+          syncCropState(crop);
           beep(620, 0.1, 'sine');
-          speak([`【${crop.cropName}】`, '浇过水的土颜色变深了。', '原型里为了看得见反馈，会推进一小段生长阶段。']);
+          speak([`【${crop.cropName}】`, '浇过水的土颜色变深了。', '睡过一天后，它会按作物状态层继续生长。']);
         },
       };
     }
@@ -747,13 +920,52 @@
     };
   }
 
+  function actionForObject(obj) {
+    if (!obj || !obj.interact || !obj.interact.action) return null;
+    if (obj.interact.action.type === 'sleep') {
+      return {
+        label: obj.interact.action.label || '睡觉',
+        run: advanceDay,
+      };
+    }
+    return null;
+  }
+
+  function contextActionCandidates() {
+    const list = [];
+    for (const e of entities) {
+      if (e.type !== 'animal') continue;
+      const d = Math.hypot(hero.x - e.x, hero.y - e.y);
+      if (d > 70) continue;
+      const action = actionForAnimal(e);
+      if (!action) continue;
+      list.push({ action, distance: d, priority: e.eggReady ? 130 : (!e.fed ? 106 : 76) });
+    }
+    for (const crop of crops) {
+      const x = tw(crop.tx + 0.5);
+      const y = tw(crop.ty + 0.5);
+      const d = Math.hypot(hero.x - x, hero.y - y);
+      if (d > 50) continue;
+      const action = actionForCrop(crop);
+      if (!action) continue;
+      list.push({ action, distance: d, priority: cropActionPriority(crop) });
+    }
+    for (const obj of MAP.objects) {
+      const action = actionForObject(obj);
+      if (!action) continue;
+      const x = tw(obj.interact.stand.x);
+      const y = tw(obj.interact.stand.y);
+      const d = Math.hypot(hero.x - x, hero.y - y);
+      if (d > 56) continue;
+      list.push({ action, distance: d, priority: 64 });
+    }
+    return list.sort((a, b) => (b.priority - a.priority) || (a.distance - b.distance));
+  }
+
   function getContextAction() {
     if (!game.started || dialog.classList.contains('show')) return null;
-    const animal = nearestAnimal();
-    if (animal) return actionForAnimal(animal);
-    const crop = nearestCrop();
-    if (crop) return actionForCrop(crop);
-    return null;
+    const [best] = contextActionCandidates();
+    return best ? best.action : null;
   }
 
   function updateActionButton() {

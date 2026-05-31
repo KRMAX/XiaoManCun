@@ -112,7 +112,35 @@ window.XMC_MAPS.village = {
   },
   navigation: {
     pathStep: 8,
+    walkableAreas: [
+      { id: 'village-playable', name: '村内可活动范围', x: 2, y: 3, w: 76, h: 47 },
+      { id: 'county-road-mouth', name: '村口大路入口', x: 68, y: 10, w: 8, h: 10 },
+    ],
+    blockedAreas: [
+      { id: 'north-woods-edge', name: '北侧树墙', x: 0, y: 0, w: 80, h: 3 },
+      { id: 'west-bamboo-edge', name: '西侧竹林', x: 0, y: 0, w: 2, h: 52 },
+      { id: 'south-village-edge', name: '南侧村界', x: 0, y: 50, w: 80, h: 2 },
+      { id: 'east-river-edge', name: '东侧河岸外', x: 76, y: 0, w: 4, h: 52 },
+    ],
+    passableAreas: [
+      { id: 'home-yard-gate', name: '院门缺口', x: 22.6, y: 12, w: 1.8, h: 6 },
+      { id: 'coop-yard-gate', name: '鸡舍门口', x: 10, y: 27, w: 3, h: 4 },
+    ],
   },
+  animalAreas: [
+    {
+      id: 'coop-yard',
+      name: '鸡舍活动区',
+      rect: { x: 5.4, y: 26.6, w: 10.6, h: 3.6 },
+      home: { x: 7.4, y: 27.5 },
+      water: { x: 10.2, y: 28.7 },
+      behavior: {
+        roamWait: [45, 135],
+        roamSpeed: 0.32,
+        sleepFrom: 1080,
+      },
+    },
+  ],
   objects: [
     {
       id: 'grandma-house',
@@ -128,6 +156,7 @@ window.XMC_MAPS.village = {
         name: '屋门',
         rect: { x: 7.2, y: 8.8, w: 2.8, h: 2.8 },
         stand: { x: 8.5, y: 12.1 },
+        action: { type: 'sleep', label: '睡觉' },
         lines: ['【外婆家】', '屋里还留着旧木柜和灶台的味道。', '正式版这里会切到屋内地图。'],
       },
     },
@@ -256,9 +285,10 @@ window.XMC_MAPS.village = {
       dir: 'down',
       spriteSet: 'farmer',
       schedule: [
-        { from: 360, to: 540, x: 14.2, y: 13.3, dir: 'down' },
-        { from: 540, to: 720, x: 25.8, y: 35.2, dir: 'up' },
-        { from: 720, to: 1080, x: 43.8, y: 24.8, dir: 'down' },
+        { from: 360, to: 540, x: 14.2, y: 13.3, dir: 'down', activity: '在院子里等你熟悉环境' },
+        { from: 540, to: 720, x: 25.8, y: 35.2, dir: 'up', activity: '在家门口菜地看苗' },
+        { from: 720, to: 1080, x: 43.8, y: 24.8, dir: 'down', activity: '去村务牌旁和邻居说话' },
+        { from: 1080, to: 1440, x: 8.5, y: 12.1, dir: 'down', activity: '傍晚回屋准备晚饭' },
       ],
       dialogue: ['【外婆】', '村子不是一张画，得让人、鸡、菜、树都各过各的日子。', '你先把路走熟，别着急。'],
     },
@@ -271,8 +301,9 @@ window.XMC_MAPS.village = {
       dir: 'left',
       spriteSet: 'farmer',
       schedule: [
-        { from: 360, to: 600, x: 53.8, y: 15.2, dir: 'left' },
-        { from: 600, to: 1020, x: 49.6, y: 23.6, dir: 'down' },
+        { from: 360, to: 600, x: 53.8, y: 15.2, dir: 'left', activity: '在作坊门口清点工具' },
+        { from: 600, to: 1020, x: 49.6, y: 23.6, dir: 'down', activity: '在广场边收村民订单' },
+        { from: 1020, to: 1440, x: 53.4, y: 14.3, dir: 'left', activity: '回作坊收工' },
       ],
       dialogue: ['【阿木叔】', '作坊早上开门，傍晚收工。', '后续我会按日程在作坊、广场、家之间走。'],
     },
@@ -285,8 +316,9 @@ window.XMC_MAPS.village = {
       dir: 'down',
       spriteSet: 'farmer',
       schedule: [
-        { from: 360, to: 660, x: 28.7, y: 13.5, dir: 'down' },
-        { from: 660, to: 1080, x: 40.4, y: 35.4, dir: 'up' },
+        { from: 360, to: 660, x: 28.7, y: 13.5, dir: 'down', activity: '在自家门口整理种子' },
+        { from: 660, to: 1080, x: 40.4, y: 35.4, dir: 'up', activity: '在邻家菜地照看萝卜' },
+        { from: 1080, to: 1440, x: 28.5, y: 12, dir: 'down', activity: '回家收拾农具' },
       ],
       dialogue: ['【阿田】', '我家的菜地在东边，别急，等关系熟了再教你换种子。', '村民的地块和你自己的地块要分开算。'],
     },
@@ -299,8 +331,9 @@ window.XMC_MAPS.village = {
       dir: 'left',
       spriteSet: 'farmer',
       schedule: [
-        { from: 360, to: 720, x: 64.5, y: 15.2, dir: 'left' },
-        { from: 720, to: 1080, x: 57.6, y: 31.4, dir: 'up' },
+        { from: 360, to: 720, x: 64.5, y: 15.2, dir: 'left', activity: '在桂嫂家门口编竹篮' },
+        { from: 720, to: 1080, x: 57.6, y: 31.4, dir: 'up', activity: '去香草畦旁摘叶子' },
+        { from: 1080, to: 1440, x: 64.7, y: 14.4, dir: 'left', activity: '傍晚回家晾竹篾' },
       ],
       dialogue: ['【桂嫂】', '香草畦归作坊用，做腌菜、香包都少不了。', '你自己的菜地先顾好，别把全村的菜都薅了。'],
     },
@@ -313,7 +346,7 @@ window.XMC_MAPS.village = {
       y: 28,
       fed: false,
       eggReady: false,
-      roam: { x: 5.5, y: 26.8, w: 10, h: 3 },
+      activityArea: 'coop-yard',
       dialogue: ['【小黄】', '咕咕。'],
     },
     {
@@ -325,7 +358,7 @@ window.XMC_MAPS.village = {
       y: 28.5,
       fed: false,
       eggReady: true,
-      roam: { x: 5.5, y: 26.8, w: 10, h: 3 },
+      activityArea: 'coop-yard',
       dialogue: ['【小白】', '咕？'],
     },
     {
@@ -337,7 +370,7 @@ window.XMC_MAPS.village = {
       y: 29,
       fed: false,
       eggReady: false,
-      roam: { x: 5.5, y: 26.8, w: 10, h: 3 },
+      activityArea: 'coop-yard',
       dialogue: ['【花花】', '它低头啄了啄地。'],
     },
   ],
