@@ -254,10 +254,10 @@
 
   // ---------------- 角色 / 实体 ----------------
   const HERO_SET = {
-    down: ['char_down_1', 'char_down_2', 'char_down_3', 'char_down_4'],
-    up: ['char_up_1', 'char_up_2', 'char_up_3', 'char_up_4'],
-    left: ['char_right_1', 'char_right_2', 'char_right_3', 'char_right_4'],
-    right: ['char_left_1', 'char_left_3'],
+    down: { frames: ['char_down_1', 'char_down_2', 'char_down_3', 'char_down_4'], flip: false },
+    up: { frames: ['char_up_1', 'char_up_2', 'char_up_3', 'char_up_4'], flip: false },
+    left: { frames: ['char_right_1', 'char_right_2', 'char_right_3', 'char_right_4'], flip: false },
+    right: { frames: ['char_right_1', 'char_right_2', 'char_right_3', 'char_right_4'], flip: true },
   };
   const CHICKEN_SET = ['chicken_1', 'chicken_2', 'chicken_5', 'chicken_6'];
 
@@ -972,15 +972,25 @@
 
   function drawCharacterAt(entity) {
     const set = HERO_SET[entity.dir] || HERO_SET.down;
-    const idx = entity.moving ? Math.floor(entity.anim) % set.length : 0;
-    const im = imgs[set[idx]] || imgs.char_down_1;
+    const idx = entity.moving ? Math.floor(entity.anim) % set.frames.length : 0;
+    const im = imgs[set.frames[idx]] || imgs.char_down_1;
     if (!im) return;
     const s = toScreen(entity.x, entity.y);
     const w = 48 * SCALE * (entity.kind === 'hero' ? HERO_SCALE : 1);
     const h = 48 * SCALE * (entity.kind === 'hero' ? HERO_SCALE : 1);
     const bob = entity.moving && Math.floor(entity.anim) % 2 ? -2 * SCALE : 0;
+    const x = Math.round(s.x - w / 2);
+    const y = Math.round(s.y - h + 8 * SCALE + bob);
     drawShadow(entity.x, entity.y, 8, 3);
-    ctx.drawImage(im, Math.round(s.x - w / 2), Math.round(s.y - h + 8 * SCALE + bob), w, h);
+    if (set.flip) {
+      ctx.save();
+      ctx.translate(x + w, y);
+      ctx.scale(-1, 1);
+      ctx.drawImage(im, 0, 0, w, h);
+      ctx.restore();
+    } else {
+      ctx.drawImage(im, x, y, w, h);
+    }
   }
 
   function drawChicken(entity) {
