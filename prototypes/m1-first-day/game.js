@@ -46,7 +46,8 @@
   for (const d of ['down', 'left', 'right', 'up']) {
     for (let i = 1; i <= 4; i++) toLoad[`char_${d}_${i}`] = `${MAP.assets.characterDir}char_${d}_${i}.png`;
   }
-  toLoad.char_side_idle_left = `${MAP.assets.characterDir}char_side_idle_left.png?v=2`;
+  toLoad.char_side_idle_left = `${MAP.assets.characterDir}char_side_idle_left.png?v=3`;
+  toLoad.char_side_idle_right = `${MAP.assets.characterDir}char_side_idle_right.png?v=1`;
   for (const i of [1, 2, 5, 6, 7, 8]) toLoad[`chicken_${i}`] = `${MAP.assets.animalDir}chicken_${i}.png`;
 
   function loadAll() {
@@ -258,7 +259,7 @@
     down: { frames: ['char_down_1', 'char_down_2', 'char_down_3', 'char_down_4'], idle: 'char_down_1', flip: false },
     up: { frames: ['char_up_1', 'char_up_2', 'char_up_3', 'char_up_4'], idle: 'char_up_1', flip: false },
     left: { frames: ['char_right_1', 'char_right_2', 'char_right_3', 'char_right_4'], idle: 'char_side_idle_left', flip: false },
-    right: { frames: ['char_right_1', 'char_right_2', 'char_right_3', 'char_right_4'], idle: 'char_side_idle_left', flip: true },
+    right: { frames: ['char_right_1', 'char_right_2', 'char_right_3', 'char_right_4'], idle: 'char_side_idle_right', flip: true, idleFlip: false },
   };
   const CHICKEN_SET = ['chicken_1', 'chicken_2', 'chicken_5', 'chicken_6'];
 
@@ -983,7 +984,8 @@
     const x = Math.round(s.x - w / 2);
     const y = Math.round(s.y - h + 8 * SCALE + bob);
     drawShadow(entity.x, entity.y, 8, 3);
-    if (set.flip) {
+    const flip = entity.moving ? set.flip : (set.idleFlip ?? set.flip);
+    if (flip) {
       ctx.save();
       ctx.translate(x + w, y);
       ctx.scale(-1, 1);
