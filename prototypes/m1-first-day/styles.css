@@ -43,7 +43,7 @@ html, body {
 #hud {
   position: absolute; top: 20px; left: 0; right: 0;
   display: flex; justify-content: space-between;
-  padding: 0 22px; pointer-events: none; z-index: 10;
+  padding: 0 22px; pointer-events: none; z-index: 36;
 }
 .hud-left, .hud-right { display: flex; gap: 14px; }
 .chip {
@@ -221,7 +221,62 @@ html, body {
 }
 
 /* ---------- 标题 / 结算卡 ---------- */
-#title-card, #end-card {
+#title-card {
+  position: absolute; inset: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center;
+  background:
+    radial-gradient(80% 58% at 50% 56%, rgba(0, 0, 0, .28), rgba(0, 0, 0, .72)),
+    linear-gradient(180deg, rgba(10, 12, 8, .36), rgba(10, 12, 8, .58)),
+    url("assets/scenes/courtyard.png") center center / cover no-repeat;
+  color: #fff7d8;
+}
+.tc-layout {
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 92px 48px 54px;
+}
+.tc-yard {
+  display: none;
+}
+.tc-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  transform: translateY(22px);
+}
+.tc-sub {
+  font-size: 34px;
+  letter-spacing: 7px;
+  color: #f0c65c;
+  font-weight: 900;
+  text-shadow: 0 3px 0 rgba(74, 47, 15, .92), 0 8px 18px rgba(0, 0, 0, .34);
+}
+.tc-main {
+  font-size: 104px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 5px 0 #a9502b, 0 12px 28px rgba(0, 0, 0, .45);
+}
+.tc-tip {
+  font-size: 26px;
+  color: #fff1c4;
+  margin-bottom: 8px;
+  font-weight: 900;
+  line-height: 1.45;
+  text-shadow: 0 3px 0 rgba(80, 52, 21, .88), 0 10px 22px rgba(0, 0, 0, .36);
+}
+.tc-credit {
+  display: none;
+}
+
+#end-card {
   position: absolute; inset: 0; z-index: 30;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 14px; text-align: center;
@@ -232,37 +287,6 @@ html, body {
   background-size: 48px 48px;
   color: var(--ink);
 }
-.tc-layout {
-  width: min(1120px, calc(100% - 80px));
-  display: grid;
-  grid-template-columns: 1.05fr .95fr;
-  align-items: center;
-  gap: 42px;
-}
-.tc-yard {
-  width: 100%;
-  height: auto;
-  image-rendering: pixelated;
-  border: 5px solid #7d6a32;
-  border-radius: 6px;
-  box-shadow: 0 8px 0 rgba(122, 95, 39, .42), 0 18px 36px rgba(67, 54, 25, .2);
-}
-.tc-copy {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-}
-.tc-sub { font-size: 31px; letter-spacing: 6px; color: #79602c; font-weight: 900; }
-.tc-main {
-  font-size: 92px;
-  font-weight: 900;
-  letter-spacing: 0;
-  color: #fff7cb;
-  text-shadow: 0 4px 0 #a26935, 0 8px 0 #6a4f24, 0 14px 24px rgba(67, 54, 25, .24);
-}
-.tc-tip { font-size: 23px; color: #5b4823; margin-bottom: 2px; font-weight: 800; line-height: 1.45; }
-.tc-credit { font-size: 14px; color: #79602c; margin-top: 2px; font-weight: 800; }
 
 #start-btn, #end-btn {
   min-width: 218px;
@@ -279,6 +303,13 @@ html, body {
   letter-spacing: 0;
   box-shadow: 0 12px 22px rgba(67, 54, 25, .28);
   animation: bob 1.5s ease-in-out infinite;
+}
+#start-btn {
+  min-width: 260px;
+  min-height: 70px;
+  border-radius: 999px;
+  font-size: 31px;
+  padding: 14px 54px;
 }
 #start-btn:disabled { filter: grayscale(.6) brightness(.85); cursor: default; animation: none; }
 #start-btn:active, #end-btn:active { transform: translateY(3px); border-bottom-width: 1px; }
