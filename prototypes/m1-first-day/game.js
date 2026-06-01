@@ -1,19 +1,20 @@
 /* 小满村 · 春一日
- * 第一版星露谷式运行底座：瓦片地图 + 对象层 + 实体层 + 作物层。
+ * 运行底座：手绘底图/瓦片地图 + 数据层碰撞、交互、实体、作物。
  */
 (() => {
   'use strict';
 
   const START_MAP_ID = (window.XMC_WORLD && window.XMC_WORLD.startMap) || 'village';
   const MAP = window.XMC_MAPS && window.XMC_MAPS[START_MAP_ID];
-  if (!MAP || MAP.engine !== 'layered-tilemap') throw new Error('Missing layered tilemap data. Load map-data.js before game.js.');
+  if (!MAP || !['layered-tilemap', 'painted-data-layer'].includes(MAP.engine)) throw new Error('Missing map data. Load map-data.js before game.js.');
+  const IS_PAINTED_MAP = MAP.engine === 'painted-data-layer';
 
   const STAGE_W = MAP.viewport.width;
   const STAGE_H = MAP.viewport.height;
-  const TILE = MAP.tileSize;
+  const TILE = MAP.tileSize || 16;
   const SCALE = MAP.renderScale || 2;
-  const WORLD_W = MAP.width * TILE;
-  const WORLD_H = MAP.height * TILE;
+  const WORLD_W = (MAP.imageSize && MAP.imageSize.width) || (MAP.width * TILE);
+  const WORLD_H = (MAP.imageSize && MAP.imageSize.height) || (MAP.height * TILE);
   const SCREEN_W = WORLD_W * SCALE;
   const SCREEN_H = WORLD_H * SCALE;
 
@@ -32,7 +33,8 @@
   window.addEventListener('resize', fit);
   fit();
 
-  const tw = (v) => v * TILE;
+  const COORD_SCALE = MAP.coordinateSystem === 'image-pixels' ? 1 : TILE;
+  const tw = (v) => v * COORD_SCALE;
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
   const hash = (x, y, salt = 0) => {
     let n = x * 374761393 + y * 668265263 + salt * 1442695041;
@@ -44,13 +46,16 @@
   const DIR = MAP.assets.baseDir;
   const imgs = {};
   const toLoad = {};
-  for (const [key, path] of Object.entries(MAP.assets.sources)) toLoad[`src_${key}`] = path;
+  if (MAP.assets.background) toLoad.bg = MAP.assets.background;
+  for (const [key, path] of Object.entries(MAP.assets.sources || {})) toLoad[`src_${key}`] = path;
   for (const d of ['down', 'left', 'right', 'up']) {
     for (let i = 1; i <= 4; i++) toLoad[`char_${d}_${i}`] = `${MAP.assets.characterDir}char_${d}_${i}.png`;
   }
-  toLoad.char_side_idle_left = `${MAP.assets.characterDir}char_side_idle_left.png?v=6`;
-  toLoad.char_side_idle_right = `${MAP.assets.characterDir}char_side_idle_right.png?v=6`;
-  for (const i of [1, 2, 5, 6, 7, 8]) toLoad[`chicken_${i}`] = `${MAP.assets.animalDir}chicken_${i}.png`;
+  toLoad.char_side_idle_left = `${MAP.assets.characterDir}char_side_idle_left.png?v=7`;
+  toLoad.char_side_idle_right = `${MAP.assets.characterDir}char_side_idle_right.png?v=7`;
+  if (MAP.assets.animalDir) {
+    for (const i of [1, 2, 5, 6, 7, 8]) toLoad[`chicken_${i}`] = `${MAP.assets.animalDir}chicken_${i}.png`;
+  }
 
   function loadAll() {
     return Promise.all(Object.entries(toLoad).map(([key, src]) => new Promise((resolve) => {
@@ -98,9 +103,11 @@
   }
 
   function tileBlocks(tileX, tileY) {
+    if (IS_PAINTED_MAP) return tileX < 0 || tileY < 0 || tileX >= MAP.width || tileY >= MAP.height;
     if (tileX < 0 || tileY < 0 || tileX >= MAP.width || tileY >= MAP.height) return true;
     const patch = terrainPatchAt(tileX, tileY);
     if (patch && patch.blocks) return true;
+    if (!MAP.tiles) return false;
     const tile = MAP.tiles[tileKeyAt(tileX, tileY)];
     return !!(tile && tile.blocks);
   }
@@ -134,6 +141,11 @@
   }
 
   function drawTerrain() {
+    if (IS_PAINTED_MAP) {
+      ctx.imageSmoothingEnabled = true;
+      if (imgs.bg) ctx.drawImage(imgs.bg, -camX, -camY, SCREEN_W, SCREEN_H);
+      return;
+    }
     const startX = Math.floor(camX / (TILE * SCALE)) - 1;
     const startY = Math.floor(camY / (TILE * SCALE)) - 1;
     const endX = Math.ceil((camX + STAGE_W) / (TILE * SCALE)) + 1;
@@ -163,13 +175,26 @@
   const navAllowRects = (MAP.navigation.walkableAreas || []).map(toWorldRect);
   const navBlockRects = (MAP.navigation.blockedAreas || []).map(toWorldRect);
   const navPassRects = (MAP.navigation.passableAreas || []).map(toWorldRect);
+  const navWalkBoundary = MAP.navigation.walkBoundary ? MAP.navigation.walkBoundary.map(([x, y]) => [tw(x), tw(y)]) : null;
   const animalAreaMap = new Map((MAP.animalAreas || []).map((area) => [area.id, area]));
 
   function pointInRect(x, y, r) {
     return x >= r.x && y >= r.y && x <= r.x + r.w && y <= r.y + r.h;
   }
+  function pointInPoly(x, y, poly) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const xi = poly[i][0];
+      const yi = poly[i][1];
+      const xj = poly[j][0];
+      const yj = poly[j][1];
+      if (((yi > y) !== (yj > y)) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
 
   function navigationAllows(x, y) {
+    if (navWalkBoundary && !pointInPoly(x, y, navWalkBoundary)) return false;
     if (navAllowRects.length && !navAllowRects.some((r) => pointInRect(x, y, r))) return false;
     if (navBlockRects.some((r) => pointInRect(x, y, r)) && !navPassRects.some((r) => pointInRect(x, y, r))) return false;
     return true;
@@ -272,8 +297,12 @@
   const HERO_SET = {
     down: { frames: ['char_down_1', 'char_down_2', 'char_down_3', 'char_down_4'], idle: 'char_down_1', flip: false },
     up: { frames: ['char_up_1', 'char_up_2', 'char_up_3', 'char_up_4'], idle: 'char_up_1', flip: false },
-    left: { frames: ['char_right_1', 'char_right_2', 'char_right_3', 'char_right_4'], idle: 'char_side_idle_left', flip: false },
-    right: { frames: ['char_right_1', 'char_right_2', 'char_right_3', 'char_right_4'], idle: 'char_side_idle_right', flip: true, idleFlip: false },
+    left: MAP.player.sideFrames === 'direct'
+      ? { frames: ['char_left_1', 'char_left_2', 'char_left_3', 'char_left_4'], idle: 'char_side_idle_left', flip: false }
+      : { frames: ['char_right_1', 'char_right_2', 'char_right_3', 'char_right_4'], idle: 'char_side_idle_left', flip: false },
+    right: MAP.player.sideFrames === 'direct'
+      ? { frames: ['char_right_1', 'char_right_2', 'char_right_3', 'char_right_4'], idle: 'char_side_idle_right', flip: false }
+      : { frames: ['char_right_1', 'char_right_2', 'char_right_3', 'char_right_4'], idle: 'char_side_idle_right', flip: true, idleFlip: false },
   };
   const CHICKEN_SET = ['chicken_1', 'chicken_2', 'chicken_5', 'chicken_6'];
 
@@ -290,6 +319,8 @@
   };
   const SPEED = MAP.player.speed;
   const HERO_SCALE = MAP.player.spriteScale || 1;
+  const HERO_FRAME = MAP.player.frame || { width: 48, height: 48, footOffset: 8 };
+  const SMOOTH_SPRITES = !!(MAP.visual && MAP.visual.smoothSprites);
   const keys = {};
   let pendingInteract = null;
   let path = [];
@@ -780,6 +811,12 @@
 
   function updateStatusPanel() {
     if (!bagList || !goalList) return;
+    const statusPanel = $('status-panel');
+    if (MAP.ui && MAP.ui.statusPanel === false) {
+      if (statusPanel) statusPanel.classList.add('hidden');
+      return;
+    }
+    if (statusPanel) statusPanel.classList.remove('hidden');
     const visibleItems = Object.entries(game.inventory)
       .filter(([, qty]) => qty > 0)
       .sort(([a], [b]) => itemName(a).localeCompare(itemName(b), 'zh-CN'))
@@ -1099,11 +1136,11 @@
     } else if (/菜地|小白菜|萝卜|香草|体力不足/.test(name)) {
       image = 'assets/xiaomancun/plants_sheet.png';
       size = '96px 32px';
-    } else if (/水井|村务牌|作坊|屋门|鸡舍|村口|外婆家|阿田家|桂嫂家/.test(name)) {
+    } else if (/水井|村务牌|作坊|屋门|鸡舍|鸡圈|村口|外婆家|阿田家|桂嫂家/.test(name)) {
       image = 'assets/xiaomancun/house.png';
       size = '86px 62px';
     } else if (name !== '外婆') {
-      image = 'assets/xiaomancun/char_down_1.png';
+      image = `assets/${MAP.assets.characterDir}char_down_1.png`;
       size = '74px 74px';
     }
     dlgPortrait.style.background = `url("${image}") center bottom / ${size} no-repeat, linear-gradient(180deg, #fff5cf, #e3bd79)`;
@@ -1256,6 +1293,7 @@
   }
 
   function drawSpriteObject(obj) {
+    if (obj.draw === false) return;
     const im = imgs[`src_${obj.sprite}`];
     if (!im) return;
     const s = toScreen(tw(obj.x), tw(obj.y));
@@ -1263,6 +1301,7 @@
   }
 
   function drawObject(obj) {
+    if (obj.draw === false) return;
     if (obj.kind === 'sprite') drawSpriteObject(obj);
     else if (obj.kind === 'fence') drawFence(obj);
     else if (obj.kind === 'tree') drawTree(obj);
@@ -1303,13 +1342,17 @@
     const im = imgs[frameKey] || imgs.char_down_1;
     if (!im) return;
     const s = toScreen(entity.x, entity.y);
-    const w = 48 * SCALE * (entity.kind === 'hero' ? HERO_SCALE : 1);
-    const h = 48 * SCALE * (entity.kind === 'hero' ? HERO_SCALE : 1);
+    const frame = entity.kind === 'hero' ? HERO_FRAME : { width: 48, height: 48, footOffset: 8 };
+    const entityScale = entity.kind === 'hero' ? HERO_SCALE : 1;
+    const w = frame.width * SCALE * entityScale;
+    const h = frame.height * SCALE * entityScale;
     const bob = entity.moving && Math.floor(entity.anim) % 2 ? -2 * SCALE : 0;
     const x = Math.round(s.x - w / 2);
-    const y = Math.round(s.y - h + 8 * SCALE + bob);
-    drawShadow(entity.x, entity.y, 8, 3);
+    const y = Math.round(s.y - h + (frame.footOffset || 8) * SCALE * entityScale + bob);
+    const shadow = (entity.kind === 'hero' && MAP.player.shadow) || { rx: 8, ry: 3 };
+    drawShadow(entity.x, entity.y, shadow.rx, shadow.ry);
     const flip = entity.moving ? set.flip : (set.idleFlip ?? set.flip);
+    ctx.imageSmoothingEnabled = SMOOTH_SPRITES;
     if (flip) {
       ctx.save();
       ctx.translate(x + w, y);
@@ -1319,6 +1362,7 @@
     } else {
       ctx.drawImage(im, x, y, w, h);
     }
+    ctx.imageSmoothingEnabled = false;
   }
 
   function drawChicken(entity) {
@@ -1421,11 +1465,14 @@
   }
 
   function drawPetals() {
+    const fx = MAP.effects.petals;
+    const resetBelow = fx.resetBelow === undefined ? tw(45) : tw(fx.resetBelow);
+    const resetLeft = fx.resetLeft === undefined ? tw(8) : tw(fx.resetLeft);
     for (const p of petals) {
       p.x += p.vx + Math.sin(p.r) * 0.08;
       p.y += p.vy;
       p.r += 0.05;
-      if (p.y > tw(45) || p.x < tw(8)) resetPetal(p, false);
+      if (p.y > resetBelow || p.x < resetLeft) resetPetal(p, false);
       const s = toScreen(p.x, p.y);
       ctx.fillStyle = 'rgba(255,184,207,.92)';
       ctx.beginPath();
